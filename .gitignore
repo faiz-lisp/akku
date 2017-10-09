@@ -1,0 +1,6 @@
+bin/akku
+dist
+.akku
+*.so
+*.wpo
+*~

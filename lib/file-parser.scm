@@ -1,0 +1,381 @@
+;; -*- mode: scheme; coding: utf-8 -*-
+;; Copyright © 2017 Göran Weinholt <goran@weinholt.se>
+;; SPDX-License-Identifier: GPL-3.0+
+
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#!r6rs
+
+;; Scheme source parser.
+
+(library (akku lib file-parser)
+  (export
+    examine-file print-artifact
+    artifact? artifact-path artifact-path-list artifact-form-index
+    artifact-imports artifact-assets artifact-implementation
+    artifact-for-test? artifact-internal? artifact-for-bin?
+    make-generic-file generic-file?
+    r6rs-library? r6rs-library-name r6rs-library-version r6rs-library-exports
+    r6rs-program?
+    module?
+    library-reference? library-reference-name library-reference-version-reference
+    library-reference-original-import-spec
+    include-reference? include-reference-path include-reference-realpath
+    include-reference-conversion include-reference-original-include-spec)
+  (import
+    (rnrs (6))
+    (akku extern match)
+    (akku lib schemedb)
+    (akku lib utils))
+
+(define *verbose* #f)
+
+(define-record-type artifact
+  (fields path path-list form-index imports assets implementation))
+
+(define-record-type generic-file
+  (parent artifact)
+  (sealed #t)
+  (nongenerative)
+  (protocol
+   (lambda (p)
+     (lambda (path path-list)
+       (let ((make (p path path-list 0 '() '() #f)))
+         (make))))))
+
+(define-record-type r6rs-library
+  (parent artifact)
+  (sealed #t)
+  (nongenerative)
+  (fields name version exports))
+
+(define-record-type r6rs-program
+  (parent artifact)
+  (sealed #t)
+  (nongenerative))
+
+(define-record-type module
+  (parent artifact)
+  (sealed #t)
+  (nongenerative))
+
+(define-record-type library-reference
+  (fields name version-reference original-import-spec)
+  (sealed #t)
+  (nongenerative))
+
+(define-record-type include-reference
+  (fields path                          ;path from libpath root
+          realpath                      ;real path
+          conversion                    ;#f, foldcase, downcase
+          original-include-spec)
+  (sealed #t)
+  (nongenerative))
+
+;; Does the file appear to be part of a test suite?
+(define (artifact-for-test? artifact)
+  (or (memq 'test (artifact-path-list artifact))
+      (memq 'tests (artifact-path-list artifact))
+      (match (string-split (artifact-path artifact) #\.)
+        ((base . _)
+         (or (string-suffix? "-tests" base)
+             (string-suffix? "-test" base)
+             (string-suffix? "/test" base)
+             (string-prefix? "test-" base)))
+        (else #f))))
+
+;; Does the file appear to be internal/private to the package?
+(define (artifact-internal? artifact)
+  (or (memq 'private (artifact-path-list artifact))
+      (memq 'internal (artifact-path-list artifact))))
+
+;; Does the file appear to be headed for bin/?
+(define (artifact-for-bin? artifact)
+  (or (memq 'bin (artifact-path-list artifact))
+      (memq 'demos (artifact-path-list artifact))
+      (memq 'programs (artifact-path-list artifact))))
+
+(define print-artifact
+  (case-lambda
+    ((a p)
+     (define (print-library-reference ref p)
+       (write (library-reference-name ref) p)
+       (unless (null? (library-reference-version-reference ref))
+         (display " version: ")
+         (write (library-reference-version-reference ref) p))
+       (newline p))
+     (define (print-include-reference ref p)
+       (write (include-reference-path ref) p)
+       (display " <= " p)
+       (write (include-reference-realpath ref) p)
+       (cond ((include-reference-conversion ref) =>
+              (lambda (conv) (display " " p) (display conv p))))
+       (newline p))
+     (cond ((r6rs-library? a)
+            (display "R6RS library: " p))
+           ((r6rs-program? a)
+            (display "R6RS program: " p))
+           ((module? a)
+            (display "Module: " p))
+           (else
+            (display "File: " p)))
+     (write (artifact-path a) p)
+     (when (artifact-for-test? a)
+       (display " -- for test" p))
+     ;; (display " -- " p)
+     ;; (write (artifact-path-list f) p)
+     (unless (zero? (artifact-form-index a))
+       (display " -- form " p)
+       (display (artifact-form-index a) p))
+     (when (artifact-implementation a)
+       (display "\n Requires: ")
+       (display (artifact-implementation a) p))
+     (cond ((r6rs-library? a)
+            (display "\n Name: " p)
+            (write (r6rs-library-name a) p)
+            (unless (null? (r6rs-library-version a))
+              (display " version: " p)
+              (write (r6rs-library-version a) p))
+            (display "\n Exports: " p)
+            (write (r6rs-library-exports a) p)))
+     (cond ((pair? (artifact-imports a))
+            (display "\n Imports: \n - " p)
+            (print-library-reference (car (artifact-imports a)) p)
+            (for-each (lambda (library-import)
+                        (display "   ")
+                        (print-library-reference library-import p))
+                      (cdr (artifact-imports a)))))
+     (cond ((pair? (artifact-assets a))
+            (display " Assets: \n - " p)
+            (print-include-reference (car (artifact-assets a)) p)
+            (for-each (lambda (file-include)
+                        (display "   ")
+                        (print-include-reference file-include p))
+                      (cdr (artifact-assets a)))
+            (newline p))
+           (else
+            (newline p))))
+    ((a)
+     (print-artifact a (current-output-port)))))
+
+;; Scan a file for includes, to see which files belong together.
+(define (scan-for-includes/r6rs form realpath)
+  ;; XXX: Note that this implementation can find includes which are in
+  ;; quoted datums or contexts where the include form is not bound,
+  ;; but this is not terribly important.
+  (define (str/sym? x) (or (string? x) (symbol? x)))
+  ;; Make the path to the included file, from the root of a directory
+  ;; in the library search path.
+  (define (make-path dir fn ext)
+    (call-with-string-output-port
+      (lambda (p)
+        (for-each (lambda (component)
+                    (display component p)
+                    (display #\/ p))
+                  dir)
+        (display fn p)
+        (when ext
+          (display ext p)))))
+  ;; Find the real path to the included file, from the package root.
+  (define (make-pkgpath dir fn ext)     ;FIXME: rename
+    ;; FIXME: This is vulnerable to path traversal attacks (files
+    ;; outside the package may be checked).
+    (let lp-root ((real-pkgroot (car (split-path realpath))))
+      (let lp ((dir^ dir))
+        (let ((pkgpath (path-join real-pkgroot (make-path dir^ fn ext))))
+          (if (file-exists? pkgpath)
+              pkgpath
+              (if (null? dir^)
+                  (cond ((member real-pkgroot '("" "."))
+                         (print "Warning: could not resolve include: " (list dir fn ext))
+                         #f)
+                        (else
+                         (lp-root (car (split-path real-pkgroot)))))
+                  (lp (cdr dir^))))))))
+  (match form
+    ;; Implementations for R6RS. Paths are relative to the library path.
+    ;; Derick Eddington (srfi and xitomatl)
+    (('include/resolve ((? string? dir) ...) (? string? fn))
+     (list (make-include-reference (make-path dir fn #f)
+                                   (make-pkgpath dir fn #f)
+                                   #f form)))
+    ;; Andreas Rottmann (spells and wak)
+    (('include-file (((? str/sym? dir) ...) (? str/sym? fn)))
+     (list (make-include-reference (make-path dir fn ".scm")
+                                   (make-pkgpath dir fn ".scm")
+                                   #f form)))
+    (('include-file/downcase (((? str/sym? dir) ...) (? str/sym? fn)))
+     (list (make-include-reference (make-path dir fn ".scm")
+                                   (make-pkgpath dir fn ".scm")
+                                   'downcase form)))
+    ((a . b)
+     (append (scan-for-includes/r6rs a realpath)
+             (scan-for-includes/r6rs b realpath)))
+    (else '())))
+
+;; R7RS version. The filename is relative to the including file, and
+;; only libraries can contain includes (possibly with ../?).
+;; (define (scan-for-includes/r7rs form)
+;;   (match form
+;;     (('include (? string?) ((? string?) ...))
+;;      (list form))
+;;     (('include-ci (? string?) ((? string?) ...))
+;;      (list form))
+;;     (('include-library-declarations (? string?) ((? string?) ...))
+;;      (list form))
+;;     ((a . b)
+;;      (append (scan-for-includes/r7rs a) (scan-for-includes/r7rs b)))
+;;     (else '())))
+
+(define (parse-r6rs-import-spec spec)
+  (define parse-import-set
+    (match-lambda
+     (('library (? list? library-reference))
+      (parse-library-reference library-reference))
+     (('only (? list? import-set) _id ...)
+      (parse-import-set import-set))
+     (('except (? list? import-set) _id ...)
+      (parse-import-set import-set))
+     (('prefix (? list? import-set) prefix)
+      (identifier? #'prefix)
+      (parse-import-set import-set))
+     (('rename (? list? import-set) ((? symbol?) (? symbol?)) ...)
+      (parse-import-set import-set))
+     ((and ((not (or 'for 'library 'only 'except 'prefix 'rename)) . _)
+           library-reference)
+      (parse-library-reference library-reference))
+     (x (error 'parse-import-set "Invalid import set" x))))
+  (define parse-library-reference
+    (match-lambda
+     (((? symbol? id*) ... (and version-reference (? list?)))
+      (make-library-reference id* (parse-version-reference version-reference) spec))
+     (((? symbol? id*) ...)
+      (make-library-reference id* '() spec))
+     (x (error 'parse-library-reference "Invalid library reference" x))))
+  (define valid-subversion?
+    (lambda (sv)
+      (and (number? sv) (integer? sv) (exact? sv) (not (negative? sv)))))
+  (define parse-sub-version-reference
+    (match-lambda
+     ((? valid-subversion? sub-version)
+      sub-version)
+     (('>= (? valid-subversion? sub-version))
+      `(>= ,sub-version))
+     (('<= (? valid-subversion? sub-version))
+      `(<= ,sub-version))
+     (('and sv* ...)
+      `(and ,@(map parse-sub-version-reference sv*)))
+     (('or sv* ...)
+      `(or ,@(map parse-sub-version-reference sv*)))
+     (('not sv)
+      `(not ,(parse-sub-version-reference sv)))
+     (x (error 'parse-sub-version-reference "Invalid sub-version reference" x))))
+  (define parse-version-reference
+    (match-lambda
+     (('and v* ...)
+      `(and ,@(map parse-version-reference v*)))
+     (('or v* ...)
+      `(or ,@(map parse-version-reference v*)))
+     (('not v)
+      `(not ,(parse-version-reference v)))
+     ((sv sv* ...)
+      `(,(parse-sub-version-reference sv) ,@(map parse-sub-version-reference sv*)))
+     (x (error 'parse-version-reference "Invalid version reference" x))))
+  (match spec
+    (('for import-set
+           (or 'run 'expand
+               ('meta (? (lambda (l)
+                           (and (number? l) (exact? l) (integer? l))))))
+           ...)
+     (parse-import-set import-set))
+    (import-set
+     (parse-import-set import-set))))
+
+(define parse-r6rs-export
+  (match-lambda
+   (('rename (local-names export-names) ...) export-names)
+   ((? symbol? x) (list x))))
+
+(define (path->implementation-name fn)
+  (match (string-split fn #\.)
+    ((_ impl (or "sls" "sps")) (string->symbol impl))
+    (_ #f)))
+
+;; Examine a file and return a file record.
+(define (examine-file realpath path path-list)
+  (define (maybe-library/module form form-index)
+    (match form
+      (('library (name ...)             ;r6rs library
+         ('export export* ...)
+         ('import import* ...)
+         . body*)
+       (let ((ver (find list? name))
+             (parsed-import-spec* (map parse-r6rs-import-spec import*)))
+         (let ((include* (scan-for-includes/r6rs body* realpath)))
+           (make-r6rs-library path path-list form-index
+                              parsed-import-spec* include*
+                              (or (path->implementation-name path)
+                                  (r6rs-library-name*->implementation-name
+                                   (map library-reference-name parsed-import-spec*)))
+                              (if ver (reverse (cdr (reverse name))) name)
+                              (or ver '())
+                              (append-map parse-r6rs-export export*)))))
+      (_                                ;some type of module or bare source
+       (cond ((path->implementation-name path) =>
+              (lambda (impl)
+                (make-module path path-list 0 #f '() impl)))
+             (else
+              ;; TODO: detect modules from various implementations
+              #f)))))
+  (define (maybe-program form form-index port)
+    (match form
+      (('import import* ...)
+       (let ((parsed-import-spec* (map parse-r6rs-import-spec import*))
+             (include* (let lp ((include* '()))
+                         (let ((datum (read port)))
+                           (if (eof-object? datum)
+                               include*
+                               (lp (append (scan-for-includes/r6rs datum realpath)
+                                           include*)))))))
+         (make-r6rs-program path path-list form-index parsed-import-spec* include*
+                            (or (path->implementation-name path)
+                                (r6rs-library-name*->implementation-name
+                                 (map library-reference-name parsed-import-spec*))))))
+      (_ #f)))
+  (guard (exn (else
+               (when *verbose*
+                 (print ";; Warning: Exception while examining file: " path))
+               #f))
+    ;; TODO: use a reader that handles non-r6rs code
+    (call-with-input-file realpath
+      (lambda (port)
+        (let ((start (port-position port)))
+          (let ((line1 (get-line port)))
+            ;; Skip the shebang
+            (unless (or (string-prefix? "#! " line1)
+                        (string-prefix? "#!/" line1))
+              (set-port-position! port start)))
+          (let lp ((artifact* '()) (form-index 0))
+            (let ((data (read port)))
+              (cond ((and (not (eof-object? data))
+                          (or (maybe-program data form-index port)
+                              (maybe-library/module data form-index)))
+                     => (lambda (artifact)
+                          (if (r6rs-library? artifact)
+                              (lp (cons artifact artifact*)
+                                  (+ form-index 1))
+                              (cons artifact artifact*))))
+                    (else
+                     (if (null? artifact*)
+                         #f
+                         artifact*)))))))))))
