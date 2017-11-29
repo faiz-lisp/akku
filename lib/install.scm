@@ -340,6 +340,22 @@
                            asset*)))
         (append (apply append artifact-filename*) (apply append asset-filename*))))))
 
+;; Installs an activation script, like Python's virtualenv.
+(define (install-activate-script)
+  ;; TODO: Setup routines for more Schemes, perhaps take the wrappers from scheme-ci.
+  (let ((filename (path-join (binaries-directory) "activate")))
+    (print ";; INFO: Installing " filename)
+    (mkdir/recursive (binaries-directory))
+    (call-with-port (open-file-output-port filename
+                                           (file-options no-fail)
+                                           (buffer-mode block)
+                                           (native-transcoder))
+      (lambda (p)
+        (display "# Load this with \"source .akku/bin/activate\" in bash\n" p)
+        (display "export CHEZSCHEMELIBDIRS=$PWD/.akku/lib\n" p)
+        (display "unset CHEZSCHEMELIBEXTS\n" p)
+        (display "export PATH=$PWD/.akku/bin:$PATH\n" p)))))
+
 (define (install lockfile-location dev?)
   (let ((project-list (parse-lockfile lockfile-location dev?)))
     (mkdir/recursive (akku-directory))
@@ -348,4 +364,5 @@
         (call-with-output-file gitignore
           (lambda (p)
             (display (sources-directory*) p)))))
-    (for-each install-project project-list))))
+    (for-each install-project project-list)
+    (install-activate-script))))

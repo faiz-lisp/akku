@@ -1,0 +1,63 @@
+env:
+  matrix:
+    - SCHEME="ChezScheme_master"
+    - SCHEME="ChezScheme_v9.5"
+    - SCHEME="Guile_2.2"
+    - SCHEME="Larceny"
+    - SCHEME="Racket_HEAD"
+    - SCHEME="SagittariusScheme"
+    - SCHEME="VicareScheme"
+
+matrix:
+  allow_failures:
+    - env: SCHEME="Guile_2.2"
+    - env: SCHEME="Larceny"
+    - env: SCHEME="Racket_HEAD"
+    - env: SCHEME="SagittariusScheme"
+    - env: SCHEME="VicareScheme"
+  fast_finish: true
+
+addons:
+  apt:
+    packages:
+      # The "_preinstalled" Schemes.
+      - racket
+      - guile-2.0
+      # Vicare
+      - libgmp-dev
+      # Sagittarius
+      - zlib1g-dev
+      - libffi-dev
+      # Larceny
+      - libc6:i386
+      # Sagittarius and GNU Guile
+      - libgc-dev
+      # GNU Guile
+      - libunistring-dev
+      - gcc-4.8
+      # For verifying downloads
+      - gnupg
+    sources:
+      - ubuntu-toolchain-r-test
+
+language: c
+
+cache:
+  ccache: true
+  directories:
+    - $HOME/opt
+
+os:
+  - linux
+
+compiler:
+  - gcc
+
+before_script:
+  - wget https://github.com/weinholt/scheme-ci/archive/master.zip -O scheme-ci-master.zip
+  - unzip scheme-ci-master.zip
+  - eval "$(CC=gcc-4.8 INSTALL_TARGET=$HOME/opt scheme-ci-master/install-scheme.sh $SCHEME)"
+
+script:
+  - ./build.chezscheme.sps
+  - ./run-tests.sh
