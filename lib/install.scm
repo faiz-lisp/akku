@@ -44,7 +44,13 @@
   (path-join (akku-directory) (sources-directory*)))
 
 (define (project-source-directory project)
-  (path-join (sources-directory) (project-name project)))
+  (match (project-source project)
+    (('directory dir)
+     ;; For sources in directories, refer directly to that directory.
+     dir)
+    (else
+     ;; Otherwise a local src directory must be created.
+     (path-join (sources-directory) (project-name project)))))
 
 (define (binaries-directory)
   (path-join (akku-directory) "bin"))
@@ -61,8 +67,13 @@
 
 (define (parse-project spec)
   (let ((tag (cond ((assq 'tag spec) => cadr) (else #f)))
-        (revision (cond ((assq 'revision spec) => cadr) (else #f))))
-    (assert (= 1 (+ (if tag 1 0) (if revision 1 0))))
+        (revision (cond ((assq 'revision spec) => cadr) (else #f)))
+        (location (assq 'location spec)))
+    (match location
+      (('location ('directory _))
+       #f)
+      (else
+       (assert (= 1 (+ (if tag 1 0) (if revision 1 0))))))
     (make-project (cadr (assq 'name spec))
                   (cond ((assq 'install spec) => cdr) (else #f))
                   (cadr (assq 'location spec))
@@ -319,6 +330,9 @@
               (git-checkout-tag srcdir (project-tag project)))
              (else
               (error 'install "No revision" project))))
+      (('directory dir)
+       (unless (file-directory? dir)
+         (error 'install "Directory does not exist" project)))
       (else
        (error 'install "Unsupported project source" (project-source project))))
     ;; Copy libraries, programs and assets to the file system. These
@@ -357,7 +371,8 @@
         (display "export PATH=$PWD/.akku/bin:$PATH\n" p)))))
 
 (define (install lockfile-location dev?)
-  (let ((project-list (parse-lockfile lockfile-location dev?)))
+  (let ((project-list (parse-lockfile lockfile-location dev?))
+        (current-project (make-project "." #f '(directory ".") #f #f)))
     (mkdir/recursive (akku-directory))
     (let ((gitignore (path-join (akku-directory) ".gitignore")))
       (unless (file-exists? gitignore)
@@ -365,4 +380,5 @@
           (lambda (p)
             (display (sources-directory*) p)))))
     (for-each install-project project-list)
+    (install-project current-project)
     (install-activate-script))))
