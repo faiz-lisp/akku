@@ -80,14 +80,22 @@
 (assert (not (petite?)))
 
 ;; Compile the akku binary.
-(parameterize ((compile-imported-libraries #t)
-               (generate-wpo-files #t)
-               (optimize-level 2))
-  (compile-library "lib/utils.scm")
-  (compile-program "bin/akku.sps" "bin/akku.so")
-  (let ((remaining (compile-whole-program "bin/akku.wpo" "bin/akku" #f)))
-    (unless (null? remaining)
-      (error 'build "Some libraries were not compiled" remaining)))
+(let-values (((from-stdout to-stdin _) (apply values (process "scheme -q"))))
+  ;; Compilation is done in a subprocess, because already loaded
+  ;; libraries are not compiled again, which means no wpo files.
+  (write '(parameterize ((compile-imported-libraries #t)
+                         (generate-wpo-files #t)
+                         (optimize-level 2))
+            (compile-program "bin/akku.sps" "bin/akku.so")
+            (let ((remaining (compile-whole-program "bin/akku.wpo" "bin/akku" #f)))
+              (unless (null? remaining)
+                (when (file-exists? "bin/akku")
+                  (delete-file "bin/akku"))
+                (error 'build "Some libraries were not compiled" remaining))))
+         to-stdin)
+  (close-port to-stdin)
+  (display (get-string-all from-stdout))
+  (close-port from-stdout)
   (chmod "bin/akku" #o755)
   (format #t "built bin/akku~%"))
 
