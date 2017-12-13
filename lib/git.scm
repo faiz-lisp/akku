@@ -25,7 +25,8 @@
     git-checkout-commit
     git-checkout-branch
     git-checkout-tag
-    git-ls-files)
+    git-ls-files
+    git-remote-set-url)
   (import
     (akku lib compat)
     (only (akku lib utils) string-split)
@@ -44,7 +45,7 @@
   (putenv "GIT_DIR" ".git")
   (putenv "AKKU_DIR" directory)
   (putenv "AKKU_COMMIT" commit)
-  (assert (zero? (system "set -x;cd \"$AKKU_DIR\" && git fetch --depth=1 -q origin \"$AKKU_COMMIT\""))))
+  (assert (zero? (system "set -x;cd \"$AKKU_DIR\" && git fetch -q origin \"$AKKU_COMMIT\""))))
 
 (define (git-fetch-tag directory tag)
   (putenv "GIT_DIR" ".git")
@@ -72,4 +73,10 @@
     (close-port to-stdin)
     (let ((output (get-string-all from-stdout)))
       (filter (lambda (x) (> (string-length x) 0))
-              (string-split output #\nul))))))
+              (string-split output #\nul)))))
+
+(define (git-remote-set-url dir name newurl)
+  (putenv "AKKU_DIR" dir)
+  (putenv "AKKU_NAME" name)
+  (putenv "AKKU_NEWURL" newurl)
+  (assert (zero? (system "set -x;cd \"$AKKU_DIR\" && git remote set-url \"$AKKU_NAME\" \"$AKKU_NEWURL\"")))))

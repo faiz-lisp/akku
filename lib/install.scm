@@ -319,9 +319,10 @@
     (print ";; INFO: Fetching " (project-name project) " ...")
     (match (project-source project)
       (('git repository)
-       (unless (file-directory? srcdir)
-         ;; TODO: Check if srcdir has the right remote.
-         (git-shallow-clone srcdir repository))
+       (cond ((file-directory? srcdir)
+              (git-remote-set-url srcdir "origin" repository))
+             (else
+              (git-shallow-clone srcdir repository)))
        (cond ((project-revision project)
               (git-fetch srcdir (project-revision project))
               (git-checkout-commit srcdir (project-revision project)))
