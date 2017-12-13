@@ -30,6 +30,7 @@
     module?
     library-reference? library-reference-name library-reference-version-reference
     library-reference-original-import-spec
+    library-reference-satisfied?
     include-reference? include-reference-path include-reference-realpath
     include-reference-conversion include-reference-original-include-spec)
   (import
@@ -167,6 +168,13 @@
             (newline p))))
     ((a)
      (print-artifact a (current-output-port)))))
+
+;; Does the artifact satisfy the library reference?
+(define (library-reference-satisfied? import artifact)
+  (and (r6rs-library? artifact)
+       ;; TODO: Check the version reference.
+       (equal? (library-reference-name import)
+               (r6rs-library-name artifact))))
 
 ;; Scan a file for includes, to see which files belong together.
 (define (scan-for-includes/r6rs form realpath)

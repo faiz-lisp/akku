@@ -20,15 +20,30 @@
 
 (library (akku lib repo-scanner)
   (export
+    scm-origin
+    scm-file-list
     find-artifacts)
   (import
     (rnrs (6))
     (akku extern match)
     (akku lib compat)
+    (akku lib git)
     (akku lib file-parser)
     (akku lib utils))
 
 (define *verbose* #f)
+
+;; Get the location for cloning the repository.
+(define (scm-origin dir)
+  (if (is-git-repository? dir)
+      `(git ,"https://example.com")
+      #f))
+
+;; Get a list of files that are tracked by the scm system.
+(define (scm-file-list dir)
+  (cond ((is-git-repository? dir)
+         (git-ls-files dir))
+        (else #f)))
 
 (define (basename->library-component filename)
   ;; TODO: unquote %-coding

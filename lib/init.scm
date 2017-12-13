@@ -26,7 +26,6 @@
     (akku extern match)
     (akku lib compat)
     (akku lib file-parser)
-    (akku lib git)
     (akku lib repo-scanner)
     (akku lib schemedb)
     (akku lib utils))
@@ -43,20 +42,8 @@
               (print " Artifact: " (artifact-path artifact)))
             (package-artifacts pkg)))
 
-;; Get the location for cloning the repository.
-(define (scm-origin dir)
-  (if (is-git-repository? dir)
-      `(git ,"https://example.com")
-      #f))
-
-;; Get a list of files that are tracked by the scm system.
-(define (scm-file-list dir)
-  (cond ((is-git-repository? dir)
-         (git-ls-files dir))
-        (else #f)))
-
-;; Go over all artifacts to find dependencies on that are not built-in
-;; and not in the package.
+;; Go over all artifacts to find dependencies on libraries that are
+;; not built-in and not in the package.
 (define (find-library-deps artifact*)
   (define lib-deps (make-hashtable equal-hash equal?))
   (define test-deps (make-hashtable equal-hash equal?))
@@ -91,15 +78,6 @@
                      => (lambda (impl) (hashtable-set! impls impl #t)))))
             artifact*)
   (vector->list (hashtable-keys impls)))
-
-;; Find artifacts satisfying a library-reference.
-(define (find-artifacts-satisfying artifact* import)
-  (filter (lambda (artifact)
-            (and (r6rs-library? artifact)
-                 ;; TODO: Check the version reference.
-                 (equal? (library-reference-name import)
-                         (r6rs-library-name artifact))))
-          artifact*))
 
 ;; Partition a list of artifacts into packages.
 (define (find-packages artifact*)

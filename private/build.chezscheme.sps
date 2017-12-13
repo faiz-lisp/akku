@@ -83,6 +83,7 @@
 (let-values (((from-stdout to-stdin _) (apply values (process "scheme -q"))))
   ;; Compilation is done in a subprocess, because already loaded
   ;; libraries are not compiled again, which means no wpo files.
+  (delete-file "bin/akku")
   (write '(parameterize ((compile-imported-libraries #t)
                          (generate-wpo-files #t)
                          (optimize-level 2))

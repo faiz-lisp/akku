@@ -67,7 +67,7 @@ Building currently requires Chez Scheme. Clone the repository:
 
 ```
 $ git clone https://github.com/weinholt/akku
-$ ./build.chezscheme.sps
+$ private/build.chezscheme.sps
 ```
 
 This produces a tarball in the current directory. The tarball contains

@@ -20,16 +20,24 @@
 (import
   (only (akku format lockfile) lockfile-filename)
   (only (akku format manifest) manifest-filename)
+  (akku lib graph)
   (akku lib init)
   (akku lib install)
   (rnrs (6)))
 
+(define (cmd-graph . _)
+  (print-gv-file "."))
+
 (define (cmd-help)
   (display "akku - Scheme package manager
 
-Usage:
+Basic usage:
  akku init - create a draft Akku.manifest
  akku install - install dependencies according to Akku.lock
+
+Advanced usage:
+ akku graph - print a graphviz file showing library dependencies
+
 " (current-error-port))
   (exit 0))
 
@@ -53,6 +61,8 @@ Usage:
 (cond
   ((null? (cdr (command-line)))
    (cmd-help))
+  ((string=? (cadr (command-line)) "graph")
+   (cmd-graph (cddr (command-line))))
   ((string=? (cadr (command-line)) "install")
    (cmd-install (cddr (command-line))))
   ((string=? (cadr (command-line)) "init")
