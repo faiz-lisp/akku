@@ -58,8 +58,9 @@ like this in it:
 Afterwards you can run `akku install` and all projects will be
 downloaded and installed in `.akku/bin` and `.akku/lib`. Lastly you
 can run `source .akku/bin/activate` (in bash). The installed libraries
-and programs should now be available to you (although initially only
-in Chez Scheme).
+and programs should now be available to you, assuming you use one of
+these Schemes: Chez Scheme, GNU Guile (with R6RS settings), Ikarus,
+Mosh, Racket, Sagittarius, Vicare or Ypsilon.
 
 ## Building a release
 

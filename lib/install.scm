@@ -357,7 +357,8 @@
 
 ;; Installs an activation script, like Python's virtualenv.
 (define (install-activate-script)
-  ;; TODO: Setup routines for more Schemes, perhaps take the wrappers from scheme-ci.
+  ;; TODO: Setup routines for more Schemes, perhaps take the wrappers
+  ;; from scheme-ci. Larceny is missing.
   (let ((filename (path-join (binaries-directory) "activate")))
     (print ";; INFO: Installing " filename)
     (mkdir/recursive (binaries-directory))
@@ -367,8 +368,15 @@
                                            (native-transcoder))
       (lambda (p)
         (display "# Load this with \"source .akku/bin/activate\" in bash\n" p)
-        (display "export CHEZSCHEMELIBDIRS=$PWD/.akku/lib\n" p)
+        (display "export CHEZSCHEMELIBDIRS=\"$PWD/.akku/lib\"\n" p)
         (display "unset CHEZSCHEMELIBEXTS\n" p)
+        (display "export GUILE_LOAD_PATH=\"$PWD/.akku/lib\"\n" p)
+        (display "export IKARUS_LIBRARY_PATH=\"$PWD/.akku/lib\"\n" p)
+        (display "export MOSH_LOADPATH=\"$PWD/.akku/lib\"\n" p)
+        (display "export PLTCOLLECTS=\":$PWD/.akku/lib\"\n" p)
+        (display "export SAGITTARIUS_LOADPATH=\"$PWD/.akku/lib\"\n" p)
+        (display "export VICARE_SOURCE_PATH=\"$PWD/.akku/lib\"\n" p)
+        (display "export YPSILON_SITELIB=\"$PWD/.akku/lib\"\n" p)
         (display "export PATH=$PWD/.akku/bin:$PATH\n" p)))))
 
 (define (install lockfile-location dev?)
