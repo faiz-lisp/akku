@@ -26,7 +26,8 @@
     git-checkout-branch
     git-checkout-tag
     git-ls-files
-    git-remote-set-url)
+    git-remote-set-url
+    git-rev-parse)
   (import
     (akku lib compat)
     (only (akku lib utils) string-split)
@@ -79,4 +80,13 @@
   (putenv "AKKU_DIR" dir)
   (putenv "AKKU_NAME" name)
   (putenv "AKKU_NEWURL" newurl)
-  (assert (zero? (system "set -x;cd \"$AKKU_DIR\" && git remote set-url \"$AKKU_NAME\" \"$AKKU_NEWURL\"")))))
+  (assert (zero? (system "set -x;cd \"$AKKU_DIR\" && git remote set-url \"$AKKU_NAME\" \"$AKKU_NEWURL\""))))
+
+(define (git-rev-parse directory rev)
+  (putenv "GIT_DIR" ".git")
+  (putenv "AKKU_DIR" directory)
+  (putenv "AKKU_REV" rev)
+  (let-values (((from-stdout to-stdin _process-id)
+                (apply values (process "cd \"$AKKU_DIR\" && git rev-parse \"$AKKU_REV\""))))
+    (close-port to-stdin)
+    (get-line from-stdout))))
