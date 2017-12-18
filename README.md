@@ -36,23 +36,38 @@ manager with these properties, in no particular order:
 These are big promises and it's a long way to go, but the hope is to
 have a modicum of usefulness every step along the way.
 
+Want to influence the future of the project?
+Join [`#akku`](irc://irc.freenode.org/#akku) on Freenode!
+
 ## Usage
 
 Download, unpack and run the installer in the latest Akku.scm release
-from [GitHub](https://github.com/weinholt/akku/releases). Alternatively
-clone the repository and follow the build instructions below.
+from [GitHub](https://github.com/weinholt/akku/releases). Pre-built
+versions are available for Linux amd64 and armhf. (Alternatively clone
+the repository and follow the build instructions below, or install it
+manually into your Scheme library path).
 
-Currently there is no easy way to add packages. You will need to
-manually construct a lockfile. Name it Akku.lock and write something
-like this in it:
+Currently there is no easy way to add packages, since only the
+lockfile part of the package manager has been implemented. You will
+need to manually construct a lockfile. Name it Akku.lock and write
+something like this:
 
 ```
 #!r6rs ;; -*-scheme-*-
 (import (akku format lockfile))
 (projects
- ((name "r6lint")
-  (location (git "https://github.com/weinholt/r6lint"))
-  (tag "v0.1.0")))    ; alternatively: revision
+ ((name "chez-srfi")
+  (location (git "https://github.com/akeep/chez-srfi.git"))
+  (revision "42d6d4cf4f506ce41152f16e30e0d7e059faef95"))
+ ((name "hashing")
+  (location (git "https://github.com/weinholt/hashing.git"))
+  (revision "de6aa096166bb026eb927b56f763707180ec0330"))
+ ((name "struct-pack")
+  (location (git "https://github.com/weinholt/struct-pack.git"))
+  (revision "eec155b069d03c12be62444754514a8fff34d4ea"))
+ ((name "xitomatl")
+  (location (git "https://github.com/weinholt/xitomatl.git"))
+  (revision "b9babf030c13d9fc81fe1482aa49ff0b8fa0fee6")))
 ```
 
 Afterwards you can run `akku install` and all projects will be
@@ -60,7 +75,13 @@ downloaded and installed in `.akku/bin` and `.akku/lib`. Lastly you
 can run `source .akku/bin/activate` (in bash). The installed libraries
 and programs should now be available to you, assuming you use one of
 these Schemes: Chez Scheme, GNU Guile (with R6RS settings), Ikarus,
-Mosh, Racket, Sagittarius, Vicare or Ypsilon.
+Mosh, Racket (plt-r6rs), Sagittarius, Vicare or Ypsilon.
+
+The install command takes care to place libraries at appropriate
+(possibly multiple) locations in the directory tree. It parses out all
+libraries from the downloaded files and even supports includes.
+Downloaded binaries are installed into `.akku/bin`, which is added to
+the path by the `activate` script.
 
 ## Building a release
 
