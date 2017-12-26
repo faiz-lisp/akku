@@ -55,7 +55,9 @@ compiler:
 
 before_script:
   # Install akku
-  - curl -L https://github.com/weinholt/akku/releases/download/v0.1.1/akku-0.1.1.pcsv9.5.ta6le.tar.gz | tar xvz
+  - wget https://github.com/weinholt/akku/releases/download/v0.1.1/akku-0.1.1.pcsv9.5.ta6le.tar.gz{,.sig}
+  - gpg --keyserver pool.sks-keyservers.net --recv-keys 08272FBB54EEB5072D5BA930E33E61A2E9B8C3A2
+  - gpg --verify akku-0.1.1.pcsv9.5.ta6le.tar.gz.sig && tar xvzf akku-0.1.1.pcsv9.5.ta6le.tar.gz
   - (cd akku-*; ./install.sh; cd ..; ~/bin/akku install)
   - export SCHEME_LIBRARY_PATH=$PWD/.akku/lib
   # Install scheme-ci
