@@ -150,7 +150,7 @@
           (format p "echo You can now run '~~/bin/akku'~%")))
       (chmod "dist/install.sh" #o755)
       ;; Build a tarball.
-      (let* ((build-version (format #f "~d+pcsv~d.~d" akku-version chez-version machine))
+      (let* ((build-version (format #f "~d+~d" akku-version machine))
              (tarfile (format #f "akku-~d.tar.gz" build-version)))
         (putenv "FILENAME" tarfile)
         (putenv "DISTVER" build-version)
