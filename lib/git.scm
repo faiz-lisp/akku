@@ -19,6 +19,7 @@
 (library (akku lib git)
   (export
     is-git-repository?
+    git-clone
     git-shallow-clone
     git-fetch
     git-fetch-tag
@@ -36,17 +37,22 @@
 (define (is-git-repository? dir)
   (file-directory? (string-append dir "/.git")))
 
+(define (git-clone directory repository)
+  (putenv "GIT_DIR" ".git")
+  (putenv "AKKU_DIR" directory)
+  (putenv "AKKU_REPO" repository)
+  (assert (zero? (system "set -x;git clone -q \"$AKKU_REPO\" \"$AKKU_DIR\""))))
+
 (define (git-shallow-clone directory repository)
   (putenv "GIT_DIR" ".git")
   (putenv "AKKU_DIR" directory)
   (putenv "AKKU_REPO" repository)
   (assert (zero? (system "set -x;git clone --single-branch --depth=1 -q \"$AKKU_REPO\" \"$AKKU_DIR\""))))
 
-(define (git-fetch directory commit)
+(define (git-fetch directory)
   (putenv "GIT_DIR" ".git")
   (putenv "AKKU_DIR" directory)
-  (putenv "AKKU_COMMIT" commit)
-  (assert (zero? (system "set -x;cd \"$AKKU_DIR\" && git fetch -q origin \"$AKKU_COMMIT\""))))
+  (assert (zero? (system "set -x;cd \"$AKKU_DIR\" && git fetch -q origin"))))
 
 (define (git-fetch-tag directory tag)
   (putenv "GIT_DIR" ".git")
