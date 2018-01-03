@@ -1,7 +1,7 @@
 #!r6rs ; -*- mode: scheme; coding: utf-8 -*-
 (import (akku format manifest))
 
-(akku-package ((akku) v0.1.2-alpha)
+(akku-package ((akku) v0.1.2)
   (description "Akku.scm is a language package manager for Scheme.")
   (authors "Göran Weinholt <goran@weinholt.se>")
   (license/spdx "GPL-3.0+ AND MIT")
