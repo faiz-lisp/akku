@@ -1,6 +1,6 @@
 #!/usr/bin/env scheme-script
 ;; -*- mode: scheme; coding: utf-8 -*-
-;; Copyright © 2017 Göran Weinholt <goran@weinholt.se>
+;; Copyright © 2017, 2018 Göran Weinholt <goran@weinholt.se>
 ;; SPDX-License-Identifier: GPL-3.0+
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -104,6 +104,13 @@
 (system "/bin/rm -rf dist")
 (let ((chez-version (car (reverse (string-split (scheme-version) #\space))))
       (machine (symbol->string (machine-type)))
+      (long-machine-type
+       (case (machine-type)
+         ((a6le ta6le) "linux.amd64")
+         ((i3le ti3le) "linux.i386")
+         ((arm32le tarm32le) "linux.arm")
+         (else
+          (symbol->string (machine-type)))))
       (akku-version (get-version "Akku.manifest")))
   ;; Chez doesn't provide an easy way to find the default boot files...
   (let ((default-heap-path (format #f "lib/csv~d/~d" chez-version machine))
@@ -150,7 +157,7 @@
           (format p "echo You can now run '~~/bin/akku'~%")))
       (chmod "dist/install.sh" #o755)
       ;; Build a tarball.
-      (let* ((build-version (format #f "~d+~d" akku-version machine))
+      (let* ((build-version (format #f "~d+~d" akku-version long-machine-type))
              (tarfile (format #f "akku-~d.tar.gz" build-version)))
         (putenv "FILENAME" tarfile)
         (putenv "DISTVER" build-version)

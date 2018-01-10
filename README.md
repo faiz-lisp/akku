@@ -36,8 +36,9 @@ manager with these properties, in no particular order:
 These are big promises and it's a long way to go, but the hope is to
 have a modicum of usefulness every step along the way.
 
-Want to influence the future of the project?
-Join [`#akku`](irc://irc.freenode.org/#akku) on Freenode!
+Want to discuss the project? Chat with `weinholt`
+in [`#scheme`](irc://irc.freenode.org/#scheme) on Freenode or open an
+issue.
 
 ## Usage
 
