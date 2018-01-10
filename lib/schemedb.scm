@@ -1,5 +1,5 @@
 ;; -*- mode: scheme; coding: utf-8 -*-
-;; Copyright © 2017 Göran Weinholt <goran@weinholt.se>
+;; Copyright © 2017-2018 Göran Weinholt <goran@weinholt.se>
 ;; SPDX-License-Identifier: GPL-3.0+
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@
     r6rs-library-name*->implementation-name)
   (import
     (rnrs (6))
-    (akku extern match))
+    (xitomatl AS-match))
 
 ;; True if lib-name is a built-in library provided by the implementation.
 (define (r6rs-builtin-library? lib-name implementation-name)

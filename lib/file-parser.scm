@@ -1,5 +1,5 @@
 ;; -*- mode: scheme; coding: utf-8 -*-
-;; Copyright © 2017 Göran Weinholt <goran@weinholt.se>
+;; Copyright © 2017-2018 Göran Weinholt <goran@weinholt.se>
 ;; SPDX-License-Identifier: GPL-3.0+
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -35,7 +35,7 @@
     include-reference-conversion include-reference-original-include-spec)
   (import
     (rnrs (6))
-    (akku extern match)
+    (xitomatl AS-match)
     (akku lib schemedb)
     (akku lib utils))
 
@@ -205,7 +205,7 @@
               pkgpath
               (if (null? dir^)
                   (cond ((member real-pkgroot '("" "."))
-                         (print "Warning: could not resolve include: " (list dir fn ext))
+                         (print ";; WARNING: could not resolve include: " (list dir fn ext))
                          #f)
                         (else
                          (lp-root (car (split-path real-pkgroot)))))

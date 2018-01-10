@@ -1,5 +1,5 @@
 ;; -*- mode: scheme; coding: utf-8 -*-
-;; Copyright © 2017 Göran Weinholt <goran@weinholt.se>
+;; Copyright © 2017-2018 Göran Weinholt <goran@weinholt.se>
 ;; SPDX-License-Identifier: GPL-3.0+
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@
     init-manifest)
   (import
     (rnrs (6))
-    (akku extern match)
+    (xitomatl AS-match)
     (akku lib compat)
     (akku lib file-parser)
     (akku lib repo-scanner)

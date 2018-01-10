@@ -4,6 +4,6 @@
 (akku-package ((akku) v0.1.3-alpha)
   (description "Akku.scm is a language package manager for Scheme.")
   (authors "Göran Weinholt <goran@weinholt.se>")
-  (license/spdx "GPL-3.0+ AND MIT")
+  (license/spdx "GPL-3.0+")
   (source (git "https://github.com/weinholt/akku"))
   (supported-schemes chezscheme))

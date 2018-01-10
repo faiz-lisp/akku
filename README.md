@@ -86,10 +86,14 @@ the path by the `activate` script.
 
 ## Building a release
 
-Building currently requires Chez Scheme. Clone the repository:
+Building currently requires Chez Scheme and either Akku or manual
+installation of dependencies (bundled source releases will be provided
+later). Clone the repository:
 
 ```
 $ git clone https://github.com/weinholt/akku
+$ akku install
+$ source .akku/bin/activate
 $ private/build.chezscheme.sps
 ```
 

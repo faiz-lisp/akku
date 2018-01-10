@@ -1,5 +1,5 @@
 ;; -*- mode: scheme; coding: utf-8 -*-
-;; Copyright © 2017 Göran Weinholt <goran@weinholt.se>
+;; Copyright © 2017-2018 Göran Weinholt <goran@weinholt.se>
 ;; SPDX-License-Identifier: GPL-3.0+
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -21,14 +21,17 @@
 (library (akku lib utils)
   (export
     print
-    iota last span! append-map filter-map map-in-order delete-duplicates
-    string-prefix? string-suffix?
-    string-index string-split
+    append-map filter-map map-in-order delete-duplicates
+    string-prefix? string-suffix? string-index
+    string-split
     mkdir/recursive split-path path-join
     read-shebang)
   (import
     (rnrs (6))
     (rnrs mutable-pairs (6))
+    (only (srfi :1 lists) append-map filter-map map-in-order delete-duplicates)
+    (only (srfi :13 strings) string-prefix? string-suffix? string-index)
+    (only (industria strings) string-split)
     (only (akku lib compat) file-directory? mkdir))
 
 (define (print . x*)
@@ -36,115 +39,6 @@
               (display x (current-error-port)))
             x*)
   (newline (current-error-port)))
-
-(define (append-map f ls)
-  (apply append (map f ls)))
-
-(define (filter-map f xs)
-  (filter (lambda (x) x) (map f xs)))
-
-(define (map-in-order f xs)
-  (if (null? xs)
-      '()
-      (cons (f (car xs))
-            (map-in-order f (cdr xs)))))
-
-(define (iota n)
-  (unless (>= n 0)
-    (error 'iota "Argument must be non-negative" n))
-  (let lp ((n n) (acc '()))
-    (if (= n 0)
-        acc
-        (lp (- n 1) (cons (- n 1) acc)))))
-
-(define (last x*)
-  (if (and (pair? x*) (null? (cdr x*)))
-      (car x*)
-      (last (cdr x*))))
-
-(define (span! pred? head)
-  (let lp ((tail head) (prev #f))
-    (cond ((null? tail)
-           (values head tail))
-          ((pred? (car tail))
-           (lp (cdr tail) tail))
-          ((not prev)
-           (values '() head))
-          (else
-           (set-cdr! prev '())
-           (values head tail)))))
-
-(define (delete-duplicates xs =?)
-  (if (null? xs)
-      '()
-      (cons (car xs)
-            (delete-duplicates (remp (lambda (y) (=? (car xs) y))
-                                     xs)
-                               =?))))
-
-(define (string-prefix? s1 s2)
-  ;; is s1 a prefix of s2?
-  (define start1 0)
-  (define start2 0)
-  (define end1 (string-length s1))
-  (define end2 (string-length s2))
-  (let lp ((start1 start1)
-           (start2 start2))
-    (cond ((= start1 end1) #t)
-          ((= start2 end2) #f)
-          ((not (char=? (string-ref s1 start1)
-                        (string-ref s2 start2)))
-           #f)
-          (else
-           (lp (+ start1 1)
-               (+ start2 1))))))
-
-(define (string-suffix? s1 s2)
-  ;; is s1 a suffix of s2?
-  (let ((l1 (string-length s1))
-        (l2 (string-length s2)))
-    (cond ((> l1 l2)
-           #f)
-          (else
-           (let lp ((i 0))
-             (cond ((= i l1) #t)
-                   ((not (char=? (string-ref s1 i)
-                                 (string-ref s2 (+ (- l2 l1) i))))
-                    #f)
-                   (else
-                    (lp (+ i 1)))))))))
-
-(define string-index
-  (case-lambda
-    ((s c)
-     (string-index s c 0))
-    ((s c start)
-     (string-index s c start (string-length s)))
-    ((s c start end)
-     (let lp ((i start))
-       (and (not (= i end))
-            (let ((c* (string-ref s i)))
-              (if (char=? c c*)
-                  i
-                  (lp (+ i 1)))))))))
-
-(define string-split
-  (case-lambda
-    ((str c max start end)
-     (cond ((zero? max)
-            (list (substring str start end)))
-           ((string-index str c start end) =>
-            (lambda (i)
-              (cons (substring str start i)
-                    (string-split str c (- max 1) (+ i 1) end))))
-           (else
-            (list (substring str start end)))))
-    ((str c max start)
-     (string-split str c max start (string-length str)))
-    ((str c max)
-     (string-split str c max 0 (string-length str)))
-    ((str c)
-     (string-split str c -1 0 (string-length str)))))
 
 ;; Split directory name and filename components.
 (define (split-path filename)

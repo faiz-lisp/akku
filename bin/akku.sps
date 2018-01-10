@@ -1,6 +1,6 @@
 #!/usr/bin/env scheme-script
 ;; -*- mode: scheme; coding: utf-8 -*- !#
-;; Copyright © 2017 Göran Weinholt <goran@weinholt.se>
+;; Copyright © 2017-2018 Göran Weinholt <goran@weinholt.se>
 ;; SPDX-License-Identifier: GPL-3.0+
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -32,7 +32,7 @@
   (display "akku - Scheme package manager
 
 Basic usage:
- akku init - create a draft Akku.manifest
+ akku init - create a draft Akku.manifest (not yet useful)
  akku install - install dependencies according to Akku.lock
 
 Advanced usage:

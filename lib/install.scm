@@ -1,5 +1,5 @@
 ;; -*- mode: scheme; coding: utf-8 -*-
-;; Copyright © 2017 Göran Weinholt <goran@weinholt.se>
+;; Copyright © 2017-2018 Göran Weinholt <goran@weinholt.se>
 ;; SPDX-License-Identifier: GPL-3.0+
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
   (import
     (rnrs (6))
     (only (rnrs r5rs) quotient remainder)
-    (akku extern match)
+    (xitomatl AS-match)
     (only (akku format manifest) manifest-filename)
     (only (akku lib compat) mkdir chmod file-directory? pretty-print)
     (akku lib file-parser)
@@ -313,8 +313,8 @@
                      (cdr target)
                      (include-reference-realpath asset)))))
 
-;; Install a project and return a alist of artifact/asset => filename.
-(define (install-project project)
+;; Fetch a project so that it's available locally.
+(define (fetch-project project)
   (let ((srcdir (project-source-directory project)))
     ;; Get the code.
     (print ";; INFO: Fetching " (project-name project) " ...")
@@ -346,7 +346,11 @@
        (unless (file-directory? dir)
          (error 'install "Directory does not exist" project)))
       (else
-       (error 'install "Unsupported project source" (project-source project))))
+       (error 'install "Unsupported project source" (project-source project))))))
+
+;; Install a project and return a alist of artifact/asset => filename.
+(define (install-project project)
+  (let ((srcdir (project-source-directory project)))
     ;; Copy libraries, programs and assets to the file system. These
     ;; operations are ordered.
     (print ";; INFO: Installing " (project-name project) " ...")
@@ -399,6 +403,7 @@
         (call-with-output-file gitignore
           (lambda (p)
             (display (sources-directory*) p)))))
+    (for-each fetch-project project-list)
     (for-each install-project project-list)
     (install-project current-project)
     (install-activate-script))))
