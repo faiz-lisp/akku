@@ -161,5 +161,5 @@
              (tarfile (format #f "akku-~d.tar.gz" build-version)))
         (putenv "FILENAME" tarfile)
         (putenv "DISTVER" build-version)
-        (system "tar -cvzf \"$FILENAME\" --transform s,^dist,akku-$DISTVER, dist/")
+        (system "tar --numeric-owner --owner 0 --group 0 -cvzf \"$FILENAME\" --transform s,^dist,akku-$DISTVER, dist/")
         (format #t "built ~d~%" tarfile)))))
