@@ -25,7 +25,7 @@
 
 ;;; Code:
 
-(library (dorodango solver dummy-db)
+(library (akku lib solver dummy-db)
   (export make-dummy-db
           dummy-db?
           dummy-db-version-ref
@@ -38,7 +38,7 @@
           (wak foof-loop)
           (wak riastreams)
           (spells record-types)
-          (dorodango solver internals))
+          (akku lib solver internals))
 
 (define-record-type* dummy-db
   (make-dummy-db)
@@ -46,7 +46,7 @@
    (version-count 0)
    (dependency-count 0)
    (dependencies '())
-   (package-table (make-eq-hashtable))))
+   (package-table (make-hashtable string-hash string=?))))
 
 (define (dummy-db-version-ref db name version-tag)
   (find-version/assert (dummy-db-package db name) version-tag))

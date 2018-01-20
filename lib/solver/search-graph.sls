@@ -24,7 +24,7 @@
 
 ;;; Code:
 
-(library (dorodango solver search-graph)
+(library (akku lib solver search-graph)
   (export make-search-graph
           search-graph?
           search-graph-step
@@ -111,12 +111,12 @@
           (spells record-types)
           (spells xvector)
           (spells tracing)
-          (dorodango private utils)
-          (dorodango solver expression)
-          (dorodango solver logging)
-          (dorodango solver choice)
-          (dorodango solver promotions)
-          (dorodango solver universe))
+          (akku private utils)
+          (akku lib solver expression)
+          (akku lib solver logging)
+          (akku lib solver choice)
+          (akku lib solver promotions)
+          (akku lib solver universe))
 
 
 ;;; A step in the search graph

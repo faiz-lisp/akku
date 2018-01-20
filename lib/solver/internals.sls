@@ -23,7 +23,7 @@
 ;; This library implements the data structures of the universe the
 ;; resolver works in, and exports both accessors and mutators for
 ;; them. It should not be imported directly, but used through the
-;; `(dorodango solver universe)' library, which provides a read-only
+;; `(akku lib solver universe)' library, which provides a read-only
 ;; view onto the universe. The obvious exception is code that needs to
 ;; _create_ a universe.
 
@@ -35,7 +35,7 @@
 
 ;;; Code:
 
-(library (dorodango solver internals)
+(library (akku lib solver internals)
   (export make-universe
           universe?
           universe-package-count
@@ -120,7 +120,7 @@
           (spells record-types)
           (spells tracing)
           (wak wt-tree)
-          (only (dorodango private utils)
+          (only (akku private utils)
                 define-guarantor))
 
 

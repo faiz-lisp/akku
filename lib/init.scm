@@ -71,14 +71,6 @@
     (values lib-dep*
             (filter (lambda (lib-name) (not (member lib-name lib-dep*))) test-dep*))))
 
-(define (find-supported-schemes artifact*)
-  (define impls (make-eq-hashtable))
-  (for-each (lambda (artifact)
-              (cond ((artifact-implementation artifact)
-                     => (lambda (impl) (hashtable-set! impls impl #t)))))
-            artifact*)
-  (vector->list (hashtable-keys impls)))
-
 ;; Partition a list of artifacts into packages.
 (define (find-packages artifact*)
   (define (library-name->package-name lib-name)
@@ -201,8 +193,7 @@
 
       (for-each
        (lambda (package)
-         (let ((supported-schemes (find-supported-schemes (package-artifacts package)))
-               (extra-files (map artifact-path
+         (let ((extra-files (map artifact-path
                                  (filter generic-file? (package-artifacts package)))))
            (let-values (((lib-deps lib-deps/test)
                          (find-library-deps (package-artifacts package))))
@@ -218,7 +209,6 @@
                          (else '()))
                  (lib-depends ,@lib-deps)
                  (lib-depends/dev ,@lib-deps/test)
-                 (supported-schemes ,@supported-schemes)
                  (depends)
                  (depends/dev)))
              (newline))))

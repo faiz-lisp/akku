@@ -26,7 +26,7 @@
 
 ;;; Code:
 
-(library (dorodango solver)
+(library (akku lib solver)
   (export make-solver
           solver?
           find-next-solution!
@@ -49,13 +49,13 @@
           (wak fmt)
           (wak foof-loop)
           (wak wt-tree)
-          (dorodango private utils)
-          (dorodango solver logging)
-          (dorodango solver choice)
-          (dorodango solver search-graph)
-          (dorodango solver promotions)
-          (dorodango solver universe)
-          (dorodango solver expression))
+          (akku private utils)
+          (akku lib solver logging)
+          (akku lib solver choice)
+          (akku lib solver search-graph)
+          (akku lib solver promotions)
+          (akku lib solver universe)
+          (akku lib solver expression))
 
 
 ;;; The solver

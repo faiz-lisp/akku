@@ -21,7 +21,7 @@
 ;;; Commentary:
 
 ;; This library presents a read-only view onto the universe. Here R6RS
-;; libraries fall short -- this and the `(dorodango solver internals)'
+;; libraries fall short -- this and the `(akku lib solver internals)'
 ;; exported interfaces could be less redundantly described using
 ;; something like `compound-interface' from the Scheme 48 module
 ;; system.
@@ -31,7 +31,7 @@
 
 ;;; Code:
 
-(library (dorodango solver universe)
+(library (akku lib solver universe)
   (export universe?
           universe-package-count
           universe-version-count
@@ -102,6 +102,6 @@
           already-generated-tier
           conflict-tier
           maximum-tier)
-  (import (dorodango solver internals))
+  (import (akku lib solver internals))
 
 )

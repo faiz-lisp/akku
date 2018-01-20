@@ -272,6 +272,7 @@
     (call-with-port (open-file-input-port source-pathname)
       (lambda (inp)
         (mkdir/recursive target-directory)
+        ;; XXX: bug when target is a symlink. this overwrites the target file.
         (call-with-port (open-file-output-port target-pathname (file-options no-fail))
           (lambda (outp)
             (pipe-ports outp inp)))))

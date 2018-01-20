@@ -23,7 +23,7 @@
 
 ;;; Code:
 
-(library (dorodango solver expression)
+(library (akku lib solver expression)
   (export expression/value
           expression/add-parent!
           expression/remove-parent!

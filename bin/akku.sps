@@ -23,6 +23,7 @@
   (akku lib graph)
   (akku lib init)
   (akku lib install)
+  (akku lib lock)                       ;here temporarily
   (rnrs (6)))
 
 (define (cmd-graph . _)
@@ -58,6 +59,15 @@ Advanced usage:
     (error 'install "The manifest already exists" manifest-filename))
   (init-manifest manifest-filename "."))
 
+(define (tmp-lock arg*)
+  (unless (null? arg*)
+    (cmd-help))
+  (unless (file-exists? manifest-filename)
+    (error 'install "The manifest must exist first" manifest-filename))
+  (lock-dependencies manifest-filename
+                     (string-append lockfile-filename ".tmp")
+                     "index.db"))
+
 (cond
   ((null? (cdr (command-line)))
    (cmd-help))
@@ -67,5 +77,7 @@ Advanced usage:
    (cmd-install (cddr (command-line))))
   ((string=? (cadr (command-line)) "init")
    (cmd-init (cddr (command-line))))
+  ((string=? (cadr (command-line)) "lock")
+   (tmp-lock (cddr (command-line))))
   (else
    (cmd-help)))

@@ -25,7 +25,7 @@
 
 ;;; Code:
 
-(library (dorodango solver promotions)
+(library (akku lib solver promotions)
   (export make-promotion
           promotion?
           promotion-choices
@@ -53,11 +53,11 @@
           (spells record-types)
           (spells xvector)
           (wak wt-tree)
-          (dorodango private utils)
-          (dorodango solver logging)
-          (dorodango solver choice)
-          (dorodango solver expression)
-          (dorodango solver universe))
+          (akku private utils)
+          (akku lib solver logging)
+          (akku lib solver choice)
+          (akku lib solver expression)
+          (akku lib solver universe))
 
 (define-record-type* promotion
   (really-make-promotion choices tier valid-condition)

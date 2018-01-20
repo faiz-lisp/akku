@@ -22,7 +22,7 @@
 
 ;;; Code:
 
-(library (dorodango solver logging)
+(library (akku lib solver logging)
   (export logger:dorodango.solver
           log/trace
           log/debug
@@ -46,11 +46,11 @@
           (spells alist)
           (spells logging)
           (wak wt-tree)
-          (dorodango private utils)
-          (dorodango solver universe)
-          (dorodango solver choice))
+          (akku private utils)
+          (akku lib solver universe)
+          (akku lib solver choice))
 
-(define logger:dorodango.solver (make-logger logger:dorodango 'solver))
+(define logger:dorodango.solver (make-logger logger:akku 'solver))
 (define log/info (make-fmt-log logger:dorodango.solver 'info))
 (define log/debug (make-fmt-log logger:dorodango.solver 'debug))
 (define log/trace (make-fmt-log logger:dorodango.solver 'trace))

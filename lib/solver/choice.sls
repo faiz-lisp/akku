@@ -26,7 +26,7 @@
 
 ;;; Code:
 
-(library (dorodango solver choice)
+(library (akku lib solver choice)
   (export make-install-choice
           make-install-from-dep-source-choice
           choice?
@@ -100,8 +100,8 @@
           (spells misc)
           (spells tracing)
           (wak wt-tree)
-          (dorodango private utils)
-          (dorodango solver universe))
+          (akku private utils)
+          (akku lib solver universe))
 
 
 ;;; Choice
