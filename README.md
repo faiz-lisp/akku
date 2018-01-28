@@ -48,38 +48,23 @@ the repository and follow the build instructions below, or install it
 manually into your Scheme library path). Please verify the OpenPGP
 signature.
 
-Currently there is no easy way to add packages, since only the
-lockfile part of the package manager has been implemented. You will
-need to manually construct a lockfile. Name it Akku.lock and write
-something like this:
+A vague outline of how things will work:
 
-```
-#!r6rs ;; -*-scheme-*-
-(import (akku format lockfile))
-(projects
- ((name "chez-srfi")
-  (location (git "https://github.com/akeep/chez-srfi.git"))
-  (revision "42d6d4cf4f506ce41152f16e30e0d7e059faef95"))
- ((name "hashing")
-  (location (git "https://github.com/weinholt/hashing.git"))
-  (revision "de6aa096166bb026eb927b56f763707180ec0330"))
- ((name "struct-pack")
-  (location (git "https://github.com/weinholt/struct-pack.git"))
-  (revision "eec155b069d03c12be62444754514a8fff34d4ea"))
- ((name "xitomatl")
-  (location (git "https://github.com/weinholt/xitomatl.git"))
-  (revision "b9babf030c13d9fc81fe1482aa49ff0b8fa0fee6")))
-```
+ - Run `akku init` in a directory to get a suggested Akku.manifest
+   printed.
+ - Edit the manifest.
+ - Run `akku lock` to get a Akku.lock file with all dependencies.
+ - Run `akku install` to install the dependencies.
+ - Run `source .akku/bin/activate` (in bash) to prepare the
+   environment for the programs and libraries in .akku.
 
-Afterwards you can run `akku install` and all projects will be
-downloaded and installed in `.akku/bin` and `.akku/lib`. Lastly you
-can run `source .akku/bin/activate` (in bash). The installed libraries
-and programs should now be available to you, assuming you use one of
-these Schemes: Chez Scheme, GNU Guile (with R6RS settings), Ikarus,
-Mosh, Racket (plt-r6rs), Sagittarius, Vicare or Ypsilon.
+The installed libraries and programs should now be available to you,
+assuming you use one of these Schemes: Chez Scheme, GNU Guile (with
+R6RS settings), Ikarus, Mosh, Racket (plt-r6rs), Sagittarius, Vicare
+or Ypsilon.
 
 The install command takes care to place libraries at appropriate
-(possibly multiple) locations in the directory tree. It parses out all
+(possibly multiple) locations in the directory tree. It parses all
 libraries from the downloaded files and even supports includes.
 Downloaded binaries are installed into `.akku/bin`, which is added to
 the path by the `activate` script.
