@@ -44,11 +44,8 @@
   (system "set -x;/bin/ln -s \"$SRC\" \"$DST\""))
 
 (define (get-version manifest)
-  (let ((version
-         (symbol->string
-          (call-with-input-file manifest
-            (lambda (p) (read p) (cadadr (read p)))))))
-    (substring version 1 (string-length version))))
+  (call-with-input-file manifest
+    (lambda (p) (read p) (cadadr (read p)))))
 
 (define (copy-chez-notice target)
   ;; Apache License 2.0 requires LICENSE and NOTICE to be included in

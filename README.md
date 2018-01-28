@@ -25,20 +25,19 @@ manager with these properties, in no particular order:
 * Use modern standards for package management, such
   as [Semantic Versions (SemVer)](http://semver.org/)
   and [SPDX license identifiers](https://spdx.org/).
-* Easy bundling/compilation of programs along with all dependencies.
-* Usable offline (and only going to the Internet after asking for
-  permission).
+* Automatic dependency solver.
 * No automatic code execution from packages on installation.
 * Verification of downloads and review tools when updating
   dependencies.
-* Automatic dependency solver.
+
+Upcoming:
+
+* Easy bundling/compilation of programs along with all dependencies.
+* Usable offline (and only going to the Internet after asking for
+  permission).
 
 These are big promises and it's a long way to go, but the hope is to
 have a modicum of usefulness every step along the way.
-
-Want to discuss the project? Chat with `weinholt`
-in [`#scheme`](irc://irc.freenode.org/#scheme) on Freenode or open an
-issue.
 
 ## Usage
 
@@ -46,7 +45,8 @@ Download, unpack and run the installer in the latest Akku.scm release
 from [GitHub](https://github.com/weinholt/akku/releases). Pre-built
 versions are available for Linux amd64 and armhf. (Alternatively clone
 the repository and follow the build instructions below, or install it
-manually into your Scheme library path).
+manually into your Scheme library path). Please verify the OpenPGP
+signature.
 
 Currently there is no easy way to add packages, since only the
 lockfile part of the package manager has been implemented. You will
@@ -84,26 +84,18 @@ libraries from the downloaded files and even supports includes.
 Downloaded binaries are installed into `.akku/bin`, which is added to
 the path by the `activate` script.
 
-## Building a release
-
-Building currently requires Chez Scheme and either Akku or manual
-installation of dependencies (bundled source releases will be provided
-later). Clone the repository:
-
-```
-$ git clone https://github.com/weinholt/akku
-$ akku install
-$ source .akku/bin/activate
-$ private/build.chezscheme.sps
-```
-
-This produces a tarball in the current directory. The tarball contains
-a Petite Chez Scheme distribution, a compiled `akku` program and a
-simple installer that creates `~/bin/akku`.
-
 ## License
 
 Akku.scm is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation, either version 3 of the License, or (at your
 option) any later version.
+
+## Credits
+
+Akku.scm uses the dependency solver from aptitude. The code is
+originally copyrighted by Daniel Burrows and ported to Scheme by
+Andreas Rottman as port of Dorodongo.
+
+Akku.scm also uses numerous SRFIs and other libraries, all of which
+can be found referenced in the Akku.lock file.

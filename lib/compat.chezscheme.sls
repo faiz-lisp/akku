@@ -1,5 +1,5 @@
 ;; -*- mode: scheme; coding: utf-8 -*-
-;; Copyright © 2017 Göran Weinholt <goran@weinholt.se>
+;; Copyright © 2017-2018 Göran Weinholt <goran@weinholt.se>
 ;; SPDX-License-Identifier: GPL-3.0+
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -21,6 +21,7 @@
     cd
     mkdir
     chmod
+    rename-file
     putenv
     system
     process
@@ -31,6 +32,7 @@
     pretty-print)
   (import
     (rnrs (6))
-    (only (chezscheme) cd mkdir chmod putenv system process directory-list
+    (only (chezscheme) cd mkdir chmod putenv rename-file
+          system process directory-list
           file-regular? file-directory? file-symbolic-link?
           pretty-print)))

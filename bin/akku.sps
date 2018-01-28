@@ -18,6 +18,7 @@
 #!r6rs
 
 (import
+  (only (spells logging) set-logger-properties! log-entry-object)
   (only (akku format lockfile) lockfile-filename)
   (only (akku format manifest) manifest-filename)
   (akku lib graph)
@@ -25,6 +26,14 @@
   (akku lib install)
   (akku lib lock)                       ;here temporarily
   (rnrs (6)))
+
+(define (simple-log-formatter entry)
+  (let ((port (current-error-port))
+        (obj (log-entry-object entry)))
+    (if (procedure? obj)
+        (obj port)
+        (display obj port))
+    (newline port)))
 
 (define (cmd-graph . _)
   (print-gv-file "."))
@@ -34,6 +43,7 @@
 
 Basic usage:
  akku init - create a draft Akku.manifest (not yet useful)
+ akku lock - generate Akku.lock from Akku.manifest and the index
  akku install - install dependencies according to Akku.lock
 
 Advanced usage:
@@ -46,9 +56,7 @@ Advanced usage:
   (unless (null? arg*)
     (cmd-help))
   (unless (file-exists? lockfile-filename)
-    ;; XXX: create the manifest?
-    (error 'install "The lockfile must exist before running this command"
-           lockfile-filename))
+    (cmd-lock '()))
   (install lockfile-filename 'dev))
 
 (define (cmd-init arg*)
@@ -59,14 +67,18 @@ Advanced usage:
     (error 'install "The manifest already exists" manifest-filename))
   (init-manifest manifest-filename "."))
 
-(define (tmp-lock arg*)
+(define (cmd-lock arg*)
   (unless (null? arg*)
     (cmd-help))
   (unless (file-exists? manifest-filename)
     (error 'install "The manifest must exist first" manifest-filename))
   (lock-dependencies manifest-filename
-                     (string-append lockfile-filename ".tmp")
+                     lockfile-filename
                      "index.db"))
+
+(set-logger-properties! logger:akku.lock
+                        `((threshold info)
+                          (handlers ,simple-log-formatter)))
 
 (cond
   ((null? (cdr (command-line)))
@@ -78,6 +90,6 @@ Advanced usage:
   ((string=? (cadr (command-line)) "init")
    (cmd-init (cddr (command-line))))
   ((string=? (cadr (command-line)) "lock")
-   (tmp-lock (cddr (command-line))))
+   (cmd-lock (cddr (command-line))))
   (else
    (cmd-help)))

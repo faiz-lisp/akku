@@ -299,6 +299,6 @@
 
 
 ;; This doesn't really belong here
-(define logger:akku (make-logger root-logger 'dorodango))
+(define logger:akku (make-logger root-logger 'akku))
 
 )

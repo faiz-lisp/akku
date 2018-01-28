@@ -199,16 +199,17 @@
                          (find-library-deps (package-artifacts package))))
              ;; (find-package-deps )
              (pretty-print
-              `(akku-package (,(package-name package) v0.1.0-alpha+20171105161600)
-                 (description #f)
+              `(akku-package (,(package-name package) "0.1.0-alpha.0")
+                 (synopsis "")
+                 (description "")
                  (authors)
-                 (license/spdx #f)
-                 (extra-files ,@extra-files)
-                 ,@(cond ((scm-origin ".")
+                 (license "NOASSERTION")
+                 (extra-files ,@extra-files) ;XXX: unused
+                 ,@(cond ((scm-origin ".") ;XXX: unused
                           => (lambda (scm-origin) `((source ,scm-origin))))
                          (else '()))
-                 (lib-depends ,@lib-deps)
-                 (lib-depends/dev ,@lib-deps/test)
+                 (lib-depends ,@lib-deps) ;XXX: unused
+                 (lib-depends/dev ,@lib-deps/test) ;XXX: unused
                  (depends)
                  (depends/dev)))
              (newline))))

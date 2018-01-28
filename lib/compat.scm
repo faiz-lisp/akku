@@ -1,5 +1,5 @@
 ;; -*- mode: scheme; coding: utf-8 -*-
-;; Copyright © 2017 Göran Weinholt <goran@weinholt.se>
+;; Copyright © 2017-2018 Göran Weinholt <goran@weinholt.se>
 ;; SPDX-License-Identifier: GPL-3.0+
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -23,6 +23,7 @@
     cd
     mkdir
     chmod
+    rename-file
     putenv
     system
     process
@@ -50,6 +51,9 @@
   (display " " (current-error-port))
   (display path (current-error-port))
   (newline (current-error-port)))
+
+(define (rename-file old new)               ;atomic overwriting file rename
+  (error 'rename-file "Please implement (akku lib compat)"))
 
 (define (putenv name value)
   (display "export " (current-error-port))

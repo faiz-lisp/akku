@@ -1,3 +1,38 @@
+# Contributing
+
+Want to discuss the project? Chat with `weinholt`
+in [`#scheme`](irc://irc.freenode.org/#scheme) on Freenode or open an
+issue. There's also `#akku`.
+
+See the [https://github.com/weinholt/akku/projects](GitHub projects)
+page to see the direction of the project.
+
+## Building a release
+
+Building currently requires Chez Scheme and either Akku.scm or manual
+installation of dependencies (bundled source releases will be provided
+for 0.2.0). Clone the repository:
+
+```
+$ git clone https://github.com/weinholt/akku
+$ akku install
+$ source .akku/bin/activate
+$ private/build.chezscheme.sps
+```
+
+This produces a tarball in the current directory. The tarball contains
+a Petite Chez Scheme distribution, a compiled `akku` program and a
+simple installer that creates `~/bin/akku`.
+
+## Submitting patches
+
+Fork the project on GitHub. Please consider using `git commit -s` when
+you create patches, to get an automatic sign-off in the commit
+message. Please write explanatory commit messages. When you feel
+comfortable with your commits, submit a pull request through GitHub.
+For larger changes it will be better to discuss the changes ahead of
+time, either through a GitHub issue or IRC.
+
 ```
 Developer Certificate of Origin
 Version 1.1
