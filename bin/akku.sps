@@ -62,9 +62,9 @@ Advanced usage:
 (define (cmd-init arg*)
   (unless (null? arg*)
     (cmd-help))
-  (when (file-exists? manifest-filename)
-    ;; XXX: well... it should do something useful
-    (error 'install "The manifest already exists" manifest-filename))
+  ;; (when (file-exists? manifest-filename)
+  ;;   ;; XXX: well... it should do something useful
+  ;;   (error 'install "The manifest already exists" manifest-filename))
   (init-manifest manifest-filename "."))
 
 (define (cmd-lock arg*)

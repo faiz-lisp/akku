@@ -27,6 +27,7 @@
     putenv
     system
     process
+    open-process-ports
     directory-list
     file-regular?
     file-directory?
@@ -68,6 +69,9 @@
   0)
 
 (define (process _command)
+  (error 'process "Please implement (akku lib compat)"))
+
+(define (open-process-ports _command)
   (error 'process "Please implement (akku lib compat)"))
 
 (define (directory-list _path)

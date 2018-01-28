@@ -81,11 +81,13 @@
               (when *verbose*
                 (print ";; File " relpath " is not a tracked file, ignored."))
               '())
+             ((and (for-all (lambda (x) x) path-list)
+                   (examine-source-file realpath relpath path-list)))
+             ((examine-other-file realpath relpath path-list))
              ((exists (lambda (x) (not x)) path-list)
               (when *verbose*
                 (print ";; File " relpath " rejected by filename->component"))
               (list (make-generic-file relpath path-list)))
-             ((examine-file realpath relpath path-list))
              (else
               (when *verbose*
                 (print ";; File " relpath " rejected by examine-file"))

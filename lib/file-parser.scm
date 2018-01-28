@@ -20,11 +20,12 @@
 
 (library (akku lib file-parser)
   (export
-    examine-file print-artifact
+    examine-source-file examine-other-file print-artifact
     artifact? artifact-path artifact-path-list artifact-form-index
     artifact-imports artifact-assets artifact-implementation
     artifact-for-test? artifact-internal? artifact-for-bin?
     make-generic-file generic-file?
+    make-legal-notice-file legal-notice-file?
     r6rs-library? r6rs-library-name r6rs-library-version r6rs-library-exports
     r6rs-program?
     module?
@@ -35,16 +36,38 @@
     include-reference-conversion include-reference-original-include-spec)
   (import
     (rnrs (6))
+    (srfi :115 regexp)
     (xitomatl AS-match)
     (akku lib schemedb)
     (akku lib utils))
 
-(define *verbose* #f)
+(define *verbose* #f)                   ;TODO: move to logging
+
+(define rx-legal-notice-filename     ;relative to the root of the repo
+  (rx (w/nocase
+       (or "AUTHORS" "CREDITS" "CONTRIBUTORS" "THANKS"
+           "debian/copyright"
+           ;; https://reuse.software/practices/
+           (: "LICENSE" (* (~ "/")))
+           (: "LICENCE" (* (~ "/")))
+           (: "COPYING" (* (~ "/")))
+           (: "COPYRIGHT" (* (~ "/")))
+           (: "LICENSES/" (* any))))))
 
 (define-record-type artifact
   (fields path path-list form-index imports assets implementation))
 
 (define-record-type generic-file
+  (parent artifact)
+  (sealed #t)
+  (nongenerative)
+  (protocol
+   (lambda (p)
+     (lambda (path path-list)
+       (let ((make (p path path-list 0 '() '() #f)))
+         (make))))))
+
+(define-record-type legal-notice-file   ;copyright notices etc
   (parent artifact)
   (sealed #t)
   (nongenerative)
@@ -128,6 +151,8 @@
             (display "R6RS program: " p))
            ((module? a)
             (display "Module: " p))
+           ((legal-notice-file? a)
+            (display "Notice: " p))
            (else
             (display "File: " p)))
      (write (artifact-path a) p)
@@ -319,8 +344,9 @@
     ((_ impl (or "sls" "sps")) (string->symbol impl))
     (_ #f)))
 
-;; Examine a file and return a file record.
-(define (examine-file realpath path path-list)
+;; Examine a source file and return a file record (or #f if it's
+;; probably not source code).
+(define (examine-source-file realpath path path-list)
   (define (maybe-library/module form form-index)
     (match form
       (('library (name ...)             ;r6rs library
@@ -386,4 +412,11 @@
                     (else
                      (if (null? artifact*)
                          #f
-                         artifact*)))))))))))
+                         artifact*))))))))))
+
+;; Examine files rejected by examine-source-file
+(define (examine-other-file realpath path path-list)
+    (define (maybe-legal)
+      (and (regexp-matches rx-legal-notice-filename path)
+           (list (make-legal-notice-file path path-list))))
+    (maybe-legal)))

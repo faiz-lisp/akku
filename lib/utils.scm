@@ -66,7 +66,9 @@
 (define (mkdir/recursive path)
   (let ((component* (string-split path #\/)))
     (let lp ((component* (cdr component*))
-             (dir (car component*)))
+             (dir (if (string-prefix? "/" path)
+                      "/"
+                      (car component*))))
       (unless (file-directory? dir)
         (mkdir dir))
       (unless (null? component*)

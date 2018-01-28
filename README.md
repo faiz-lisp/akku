@@ -35,23 +35,30 @@ Upcoming:
 * Easy bundling/compilation of programs along with all dependencies.
 * Usable offline (and only going to the Internet after asking for
   permission).
+* Support for compiling native code extensions (given that the user
+  permits it).
 
 These are big promises and it's a long way to go, but the hope is to
 have a modicum of usefulness every step along the way.
 
+## Dependencies
+
+Akku.scm currently requires the git and curl programs. It has only
+been tested on GNU/Linux systems.
+
 ## Usage
 
-Download, unpack and run the installer in the latest Akku.scm release
+Download, unpack and run the installer for the latest Akku.scm release
 from [GitHub](https://github.com/weinholt/akku/releases). Pre-built
-versions are available for Linux amd64 and armhf. (Alternatively clone
-the repository and follow the build instructions below, or install it
-manually into your Scheme library path). Please verify the OpenPGP
-signature.
+versions are available for GNU/Linux amd64 and armhf. (Alternatively
+clone the repository and follow the build instructions below, or
+install it manually into your Scheme library path). Please verify the
+OpenPGP signature.
 
 A vague outline of how things will work:
 
  - Run `akku init` in a directory to get a suggested Akku.manifest
-   printed.
+   printed. (This is not quite going to give good results right now).
  - Edit the manifest.
  - Run `akku lock` to get a Akku.lock file with all dependencies.
  - Run `akku install` to install the dependencies.
@@ -68,6 +75,35 @@ The install command takes care to place libraries at appropriate
 libraries from the downloaded files and even supports includes.
 Downloaded binaries are installed into `.akku/bin`, which is added to
 the path by the `activate` script.
+
+## For package authors
+
+Please carry on as you are. There will not be any dogmas or mandates
+coming from Akku: it is Akku's job to work with your code. If it works
+in a supported Scheme then it should work with Akku. Right now the
+majority of R6RS code in git repositories can be used as-is. The
+troublesome parts are native code extensions with C code and some
+implementation-specific module formats (both of which are planned to
+be fixed).
+
+Here are some practices you can try to follow in your life, to make
+life easier for everyone else, regardless of package manager:
+
+ - Use semantic versioning and publish releases of your project:
+   https://semver.org/
+ - Tag releases in your source code repository (e.g. 1.0.0 is tagged
+   with v1.0.0): https://help.github.com/articles/creating-releases/
+ - Clearly identify the licenses of the code you distribute:
+   https://reuse.software/practices/. If no license is declared then
+   the default of copyright law applies, which is that no license at
+   all has been granted. This makes reuse a potential legal hassle.
+
+## API
+
+Akku.scm uses Semantic Versioning for its releases, and so needs to
+declare an API. The libraries that are part of Akku.scm are currently
+not part of the API. The only stable API right now is the command line
+interface.
 
 ## License
 

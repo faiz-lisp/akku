@@ -25,6 +25,7 @@
     putenv
     system
     process
+    open-process-ports
     directory-list
     file-regular?
     file-directory?
@@ -33,6 +34,6 @@
   (import
     (rnrs (6))
     (only (chezscheme) cd mkdir chmod putenv rename-file
-          system process directory-list
+          system process open-process-ports directory-list
           file-regular? file-directory? file-symbolic-link?
           pretty-print)))

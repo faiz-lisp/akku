@@ -22,6 +22,7 @@
   (import
     (rnrs (6))
     (only (rnrs r5rs) quotient remainder)
+    (xitomatl alists)
     (xitomatl AS-match)
     (only (akku format manifest) manifest-filename)
     (only (akku lib compat) mkdir chmod file-directory? pretty-print)
@@ -58,6 +59,10 @@
 (define (libraries-directory)
   (path-join (akku-directory) "lib"))
 
+(define (notices-directory project)
+  (path-join (path-join (akku-directory) "notices")
+             (project-name project)))
+
 (define-record-type project
   (fields name packages source
           ;; one of these:
@@ -67,17 +72,15 @@
 
 (define (parse-project spec)
   (let ((tag (cond ((assq 'tag spec) => cadr) (else #f)))
-        (revision (cond ((assq 'revision spec) => cadr) (else #f)))
+        (revision (car (assq-ref spec 'revision)))
         (location (assq 'location spec)))
     (match location
       (('location ('directory _))
        #f)
-      (else
-       (unless (or tag revision)
-         (error 'parse-project "Project must have tag or revision" spec))))
-    (make-project (cadr (assq 'name spec))
+      (else #f))
+    (make-project (car (assq-ref spec 'name))
                   (cond ((assq 'install spec) => cdr) (else #f))
-                  (cadr (assq 'location spec))
+                  (car (assq-ref spec 'location))
                   tag revision)))
 
 ;; Parse a lockfile, returning a list of project records.
@@ -264,7 +267,7 @@
         (chmod target-pathname #o755)))
     target-pathname))
 
-;; Copy a binary file.
+;; Copy a regular file.
 (define (copy-file target-directory target-filename source-pathname)
   (let ((target-pathname (path-join target-directory target-filename)))
     (print ";; DEBUG: Copying file " source-pathname " to " target-pathname)
@@ -279,7 +282,7 @@
     target-pathname))
 
 ;; Install an artifact.
-(define (install-artifact artifact srcdir)
+(define (install-artifact project artifact srcdir)
   (cond
     ((r6rs-library? artifact)
      (let ((library-locations
@@ -305,9 +308,15 @@
                                     (cdr target)
                                     (path-join srcdir (artifact-path artifact))
                                     (artifact-form-index artifact))))))
+    ((legal-notice-file? artifact)
+     ;; FIXME: A notice might be in a subdirectory
+     (list (copy-file (notices-directory project)
+                      (artifact-path artifact)
+                      (path-join srcdir (artifact-path artifact))))
+     '())
     (else '())))
 
-;; Installs an asset, which can be any arbitrary binary file.
+;; Installs an asset, which can be any regular file.
 (define (install-asset asset)
   (let ((target (split-path (include-reference-path asset))))
     (list (copy-file (path-join (libraries-directory) (car target))
@@ -362,7 +371,7 @@
       (let ((artifact-filename*
              (map-in-order (lambda (artifact)
                              (map (lambda (fn) (cons artifact fn))
-                                  (install-artifact artifact srcdir)))
+                                  (install-artifact project artifact srcdir)))
                            artifact*))
             (asset-filename*
              (map-in-order (lambda (asset)
@@ -397,7 +406,7 @@
 
 (define (install lockfile-location dev?)
   (let ((project-list (parse-lockfile lockfile-location dev?))
-        (current-project (make-project "." #f '(directory ".") #f #f)))
+        (current-project (make-project "" #f '(directory ".") #f #f)))
     (mkdir/recursive (akku-directory))
     (let ((gitignore (path-join (akku-directory) ".gitignore")))
       (unless (file-exists? gitignore)
