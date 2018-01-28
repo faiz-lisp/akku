@@ -24,7 +24,7 @@ manager with these properties, in no particular order:
   repositories.
 * Use modern standards for package management, such
   as [Semantic Versions (SemVer)](http://semver.org/)
-  and [SPDX license identifiers](https://spdx.org/).
+  and [SPDX license expressions](https://spdx.org/).
 * Automatic dependency solver.
 * No automatic code execution from packages on installation.
 * Verification of downloads and review tools when updating
