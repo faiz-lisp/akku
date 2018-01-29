@@ -19,12 +19,13 @@
 
 (import
   (only (spells logging) set-logger-properties! log-entry-object)
+  (akku lib bundle)
   (only (akku format lockfile) lockfile-filename)
   (only (akku format manifest) manifest-filename)
   (akku lib graph)
   (akku lib init)
   (akku lib install)
-  (akku lib lock)                       ;here temporarily
+  (akku lib lock)
   (rnrs (6)))
 
 (define (simple-log-formatter entry)
@@ -34,9 +35,6 @@
         (obj port)
         (display obj port))
     (newline port)))
-
-(define (cmd-graph . _)
-  (print-gv-file "."))
 
 (define (cmd-help)
   (display "akku - Scheme package manager
@@ -48,16 +46,11 @@ Basic usage:
 
 Advanced usage:
  akku graph - print a graphviz file showing library dependencies
+ akku dependency-scan <filename(s)> - print source code dependencies
+ akku license-scan <filename(s)> - scan dependencies for notices
 
 " (current-error-port))
   (exit 0))
-
-(define (cmd-install arg*)
-  (unless (null? arg*)
-    (cmd-help))
-  (unless (file-exists? lockfile-filename)
-    (cmd-lock '()))
-  (install lockfile-filename 'dev))
 
 (define (cmd-init arg*)
   (unless (null? arg*)
@@ -76,6 +69,30 @@ Advanced usage:
                      lockfile-filename
                      "index.db"))
 
+(define (cmd-install arg*)
+  (unless (null? arg*)
+    (cmd-help))
+  (unless (file-exists? lockfile-filename)
+    (cmd-lock '()))
+  (install lockfile-filename))
+
+(define (cmd-graph . _)
+  (print-gv-file "."))
+
+(define (cmd-dependency-scan arg*)
+  (when (null? arg*)
+    (display "ERROR: You must provide at least one program or library entry point\n\n"
+             (current-error-port))
+    (cmd-help))
+  (dependency-scan arg* '(chezscheme))) ;TODO
+
+(define (cmd-license-scan arg*)
+  (when (null? arg*)
+    (display "ERROR: You must provide at least one program or library entry point\n\n"
+             (current-error-port))
+    (cmd-help))
+  (license-scan arg* '(chezscheme)))    ;TODO
+
 (set-logger-properties! logger:akku.lock
                         `((threshold info)
                           (handlers ,simple-log-formatter)))
@@ -83,13 +100,17 @@ Advanced usage:
 (cond
   ((null? (cdr (command-line)))
    (cmd-help))
-  ((string=? (cadr (command-line)) "graph")
-   (cmd-graph (cddr (command-line))))
-  ((string=? (cadr (command-line)) "install")
-   (cmd-install (cddr (command-line))))
   ((string=? (cadr (command-line)) "init")
    (cmd-init (cddr (command-line))))
   ((string=? (cadr (command-line)) "lock")
    (cmd-lock (cddr (command-line))))
+  ((string=? (cadr (command-line)) "install")
+   (cmd-install (cddr (command-line))))
+  ((string=? (cadr (command-line)) "graph")
+   (cmd-graph (cddr (command-line))))
+  ((string=? (cadr (command-line)) "dependency-scan")
+   (cmd-dependency-scan (cddr (command-line))))
+  ((string=? (cadr (command-line)) "license-scan")
+   (cmd-license-scan (cddr (command-line))))
   (else
    (cmd-help)))

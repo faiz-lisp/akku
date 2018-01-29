@@ -70,7 +70,7 @@
              (string=? "_darcs" fn)
              (string=? "Akku.lock" fn)
              (string=? "Akku.manifest" fn)
-             (file-symbolic-link? fn))
+             (file-symbolic-link? realpath))
          (when *verbose*
            (print ";; Ignored " relpath))
          '())                        ;ignore

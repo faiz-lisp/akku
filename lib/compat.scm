@@ -24,6 +24,7 @@
     mkdir
     chmod
     rename-file
+    symlink
     putenv
     system
     process
@@ -32,6 +33,7 @@
     file-regular?
     file-directory?
     file-symbolic-link?
+    file-exists/no-follow?
     pretty-print)
   (import
     (rnrs (6)))
@@ -72,19 +74,25 @@
   (error 'process "Please implement (akku lib compat)"))
 
 (define (open-process-ports _command)
-  (error 'process "Please implement (akku lib compat)"))
+  (error 'open-process-ports "Please implement (akku lib compat)"))
 
 (define (directory-list _path)
   (error 'directory-list "Please implement (akku lib compat)"))
 
 (define (file-regular? _path)
-  (error 'directory-list "Please implement (akku lib compat)"))
+  (error 'file-regular? "Please implement (akku lib compat)"))
 
 (define (file-directory? _path)
-  (error 'directory-list "Please implement (akku lib compat)"))
+  (error 'file-directory? "Please implement (akku lib compat)"))
 
 (define (file-symbolic-link? _path)
-  (error 'directory-list "Please implement (akku lib compat)"))
+  (error 'file-symbolic-link? "Please implement (akku lib compat)"))
+
+(define (file-exists/no-follow? _path)
+  (error 'file-exists/no-follow? "Please implement (akku lib compat)"))
+
+(define (symlink from to)
+  (error 'symlink "Please implement (akku lib compat)"))
 
 (define pretty-print
   (case-lambda

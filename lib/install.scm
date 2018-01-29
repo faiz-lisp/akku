@@ -16,19 +16,26 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #!r6rs
 
+;; Copies code and notices from projects to .akku/.
+
 (library (akku lib install)
   (export
-    install)
+    install
+    libraries-directory file-list-filename
+    make-r6rs-library-filenames)
   (import
     (rnrs (6))
     (only (rnrs r5rs) quotient remainder)
+    (only (xitomatl common) pretty-print)
     (xitomatl alists)
     (xitomatl AS-match)
     (only (akku format manifest) manifest-filename)
-    (only (akku lib compat) mkdir chmod file-directory? pretty-print)
+    (only (akku lib compat) mkdir chmod file-directory?
+          file-symbolic-link? file-exists/no-follow? symlink)
     (akku lib file-parser)
     (akku lib git)
     (akku lib init)
+    (akku lib lock)
     (akku lib library-name)
     (akku lib repo-scanner)
     (akku lib utils))
@@ -63,6 +70,9 @@
   (path-join (path-join (akku-directory) "notices")
              (project-name project)))
 
+(define (file-list-filename)
+  (path-join (akku-directory) "list"))
+
 (define-record-type project
   (fields name packages source
           ;; one of these:
@@ -84,22 +94,53 @@
                   tag revision)))
 
 ;; Parse a lockfile, returning a list of project records.
-(define (parse-lockfile lockfile-location dev?)
+(define (read-lockfile lockfile-location)
   (call-with-input-file lockfile-location
     (lambda (p)
       (unless (equal? (read p) '(import (akku format lockfile)))
-        (error 'parse-lockfile "Invalid lockfile (wrong import)" lockfile-location))
+        (error 'read-lockfile "Invalid lockfile (wrong import)" lockfile-location))
       (let lp ((project* '()))
         (match (read p)
           ((? eof-object?)
            project*)
           (('projects . prj*)
            (lp (append (map parse-project prj*) project*)))
-          (('projects/dev . prj*)
-           (if dev?
-               (lp (append (map parse-project prj*) project*))
-               (lp project*)))
           (_ (lp project*)))))))
+
+;; Fetch a project so that it's available locally.
+(define (fetch-project project)
+  (let ((srcdir (project-source-directory project)))
+    ;; Get the code.
+    (print ";; INFO: Fetching " (project-name project) " ...")
+    (match (project-source project)
+      (('git repository)
+       (cond ((file-directory? srcdir)
+              (git-remote-set-url srcdir "origin" repository))
+             (else
+              (if (project-tag project)
+                  (git-shallow-clone srcdir repository)
+                  (git-clone srcdir repository))))
+       (let ((current-revision (git-rev-parse srcdir "HEAD")))
+         (cond ((equal? current-revision (project-revision project)))
+               ((project-tag project)
+                (git-fetch-tag srcdir (project-tag project))
+                (git-checkout-tag srcdir (project-tag project)))
+               ((project-revision project)
+                (git-fetch srcdir)
+                (git-checkout-commit srcdir (project-revision project)))
+               (else
+                (error 'install "No revision" project))))
+       (let ((current-revision (git-rev-parse srcdir "HEAD")))
+         (print ";; INFO: Fetched revision " current-revision)
+         (unless (or (not (project-revision project))
+                     (equal? current-revision (project-revision project)))
+           (error 'install "Tag does not match revision" (project-tag project)
+                  (project-revision project)))))
+      (('directory dir)
+       (unless (file-directory? dir)
+         (error 'install "Directory does not exist" project)))
+      (else
+       (error 'install "Unsupported project source" (project-source project))))))
 
 (define (check-filename filename windows?)
   ;; Protection against path traversal attacks and other types of
@@ -141,58 +182,27 @@
 
 ;; Makes all known variants of the path for the library.
 (define (make-r6rs-library-filenames name implementation)
-  (define library-name->file-name-variants
-    (case implementation
-      ((chezscheme)
-       (list library-name->file-name/chezscheme))
-      ((ikarus)
-       (list library-name->file-name/ikarus))
-      ((ironscheme)
-       (list library-name->file-name/ironscheme))
-      ((mzscheme)
-       (list library-name->file-name/racket))
-      (else
-       ;; If the library is not implementation-dependent, then it
-       ;; could be loaded from any one of these filenames.
-       (list library-name->file-name/chezscheme
-             library-name->file-name/ikarus
-             library-name->file-name/ironscheme
-             library-name->file-name/psyntax
-             library-name->file-name/racket))))
-  (delete-duplicates (filter-map
-                      (lambda (library-name->file-name)
-                        (guard (exn
-                                ((serious-condition? exn)
-                                 (when (and (message-condition? exn)
-                                            (irritants-condition? exn))
-                                   (print "ERROR: " (condition-message exn) ": "
-                                          (condition-irritants exn)))
-                                 #f))
-                          (let* ((filename (library-name->file-name name))
-                                 (filename (substring filename 1 (string-length filename)))
-                                 (filename (if implementation
-                                               (string-append filename "."
-                                                              (symbol->string implementation))
-                                               filename))
-                                 (filename (string-append filename ".sls")))
-                            (check-filename filename (support-windows?))
-                            (split-path filename))))
-                      library-name->file-name-variants)
-                     equal?))
-
-;; Copy all data to the port `outp` from `inp`.
-(define (pipe-ports outp inp)
-  (if (textual-port? outp)
-      (let lp ()
-        (let ((buf (get-string-n inp (* 16 1024))))
-          (unless (eof-object? buf)
-            (put-string outp buf)
-            (lp))))
-      (let lp ()
-        (let ((buf (get-bytevector-n inp (* 16 1024))))
-          (unless (eof-object? buf)
-            (put-bytevector outp buf)
-            (lp))))))
+  (delete-duplicates
+   (filter-map
+    (lambda (library-name->file-name)
+      (guard (exn
+              ((serious-condition? exn)
+               (when (and (message-condition? exn)
+                          (irritants-condition? exn))
+                 (print "ERROR: " (condition-message exn) ": "
+                        (condition-irritants exn)))
+               #f))
+        (let* ((filename (library-name->file-name name))
+               (filename (substring filename 1 (string-length filename)))
+               (filename (if implementation
+                             (string-append filename "."
+                                            (symbol->string implementation))
+                             filename))
+               (filename (string-append filename ".sls")))
+          (check-filename filename (support-windows?))
+          (split-path filename))))
+    (library-name->file-name-variants implementation))
+   equal?))
 
 ;; Copies a single R6RS library form from one file to another.
 (define (copy-r6rs-library target-directory target-filename source-pathname form-index)
@@ -206,9 +216,12 @@
         (read-shebang inp)
         (let* ((start (port-position inp))
                (f0 (read inp))
-               (f1 (read inp)))
+               (f1 (read inp))
+               (target-pathname (path-join target-directory target-filename)))
           (mkdir/recursive target-directory)
-          (call-with-port (open-file-output-port (path-join target-directory target-filename)
+          (when (file-symbolic-link? target-pathname)
+            (delete-file target-pathname))
+          (call-with-port (open-file-output-port target-pathname
                                                  (file-options no-fail)
                                                  (buffer-mode block)
                                                  (native-transcoder))
@@ -216,11 +229,17 @@
               ;; TODO: Only add #!r6rs if it's not in the original source.
               (display "#!r6rs " outp) ;XXX: required for Racket
               (cond ((and (= form-index 0) (eof-object? f1))
-                     ;; The source has a single form, so it's safe to copy the text.
+                     ;; The source has a single form, so it's safe to
+                     ;; copy the text. TODO: Hardlink in this case. If
+                     ;; hardlinks are used then file-symbolic-links?
+                     ;; needs to be file-exists/no-follow? everywhere.
                      (set-port-position! inp start)
                      (pipe-ports outp inp))
                     (else
-                     ;; TODO: Include comments and original formatting for this case.
+                     ;; TODO: Include comments and original formatting
+                     ;; for this case. This will be a problem for
+                     ;; license compliance if form 0 is not used in a
+                     ;; compiled program, but form 1 is.
                      (print ";; DEBUG: Reformatting " target-pathname)
                      (let ((form (case form-index
                                    ((0) f0)
@@ -231,9 +250,9 @@
                                         (if (zero? form-index)
                                             form
                                             (lp (- form-index 1)))))))))
-                       (display ";; Copied by Akku from " outp)
+                       (display ";; Copyright notices may be found in " outp)
                        (write source-pathname outp)
-                       (display "\n;; Refer to that file for applicable copyright notices\n" outp)
+                       (display "\n;; This file was copied by Akku.scm\n" outp)
                        (pretty-print form outp)))))))))
     target-pathname))
 
@@ -248,6 +267,8 @@
       (lambda (inp)
         (read-shebang inp)
         (mkdir/recursive target-directory)
+        (when (file-symbolic-link? target-pathname)
+          (delete-file target-pathname))
         (call-with-port (open-file-output-port target-pathname
                                                (file-options no-fail)
                                                (buffer-mode block)
@@ -275,10 +296,22 @@
     (call-with-port (open-file-input-port source-pathname)
       (lambda (inp)
         (mkdir/recursive target-directory)
-        ;; XXX: bug when target is a symlink. this overwrites the target file.
-        (call-with-port (open-file-output-port target-pathname (file-options no-fail))
+        (when (file-symbolic-link? target-pathname)
+          (delete-file target-pathname))
+        (call-with-port (open-file-output-port target-pathname
+                                               (file-options no-fail))
           (lambda (outp)
             (pipe-ports outp inp)))))
+    target-pathname))
+
+(define (symlink-file target-directory target-filename source-pathname)
+  (let ((target-pathname (path-join target-directory target-filename)))
+    (print ";; DEBUG: Symlinking file " source-pathname " to " target-pathname)
+    (check-filename target-pathname (support-windows?))
+    (mkdir/recursive target-directory)
+    (when (file-exists/no-follow? target-pathname)
+      (delete-file target-pathname))
+    (symlink source-pathname target-pathname)
     target-pathname))
 
 ;; Install an artifact.
@@ -288,18 +321,32 @@
      (let ((library-locations
             (make-r6rs-library-filenames (r6rs-library-name artifact)
                                          (artifact-implementation artifact))))
-       (when (null? library-locations)
-         (print ";; WARNING: could not construct a filename for "
-                (r6rs-library-name artifact)))
-       ;; Create each of the locations for the library. TODO:
-       ;; Symlink from the first location.
-       (map-in-order
-        (lambda (target)
-          (copy-r6rs-library (path-join (libraries-directory) (car target))
-                             (cdr target)
-                             (path-join srcdir (artifact-path artifact))
-                             (artifact-form-index artifact)))
-        library-locations)))
+       (cond
+         ((null? library-locations)
+          (print ";; WARNING: could not construct a filename for "
+                 (r6rs-library-name artifact))
+          '())
+         (else
+          ;; Create each of the locations for the library. The first
+          ;; is a regular file and the rest are symlinks.
+          (let ((target (car library-locations))
+                (aliases (cdr library-locations)))
+            (let ((target-pathname
+                   (copy-r6rs-library (path-join (libraries-directory) (car target))
+                                      (cdr target)
+                                      (path-join srcdir (artifact-path artifact))
+                                      (artifact-form-index artifact))))
+              (cons target-pathname
+                    (map-in-order
+                     (lambda (alias)
+                       (if (support-windows?)
+                           (copy-file (path-join (libraries-directory) (car alias))
+                                      (cdr alias)
+                                      target-pathname)
+                           (symlink-file (path-join (libraries-directory) (car alias))
+                                         (cdr alias)
+                                         target-pathname)))
+                     aliases))))))))
     ((r6rs-program? artifact)
      (if (or (artifact-internal? artifact) (not (artifact-for-bin? artifact)))
          '()
@@ -309,11 +356,9 @@
                                     (path-join srcdir (artifact-path artifact))
                                     (artifact-form-index artifact))))))
     ((legal-notice-file? artifact)
-     ;; FIXME: A notice might be in a subdirectory
-     (list (copy-file (notices-directory project)
-                      (artifact-path artifact)
-                      (path-join srcdir (artifact-path artifact))))
-     '())
+     (list (copy-file (path-join (notices-directory project) (artifact-directory artifact))
+                      (artifact-filename artifact)
+                      (path-join srcdir (artifact-path artifact)))))
     (else '())))
 
 ;; Installs an asset, which can be any regular file.
@@ -322,41 +367,6 @@
     (list (copy-file (path-join (libraries-directory) (car target))
                      (cdr target)
                      (include-reference-realpath asset)))))
-
-;; Fetch a project so that it's available locally.
-(define (fetch-project project)
-  (let ((srcdir (project-source-directory project)))
-    ;; Get the code.
-    (print ";; INFO: Fetching " (project-name project) " ...")
-    (match (project-source project)
-      (('git repository)
-       (cond ((file-directory? srcdir)
-              (git-remote-set-url srcdir "origin" repository))
-             (else
-              (if (project-tag project)
-                  (git-shallow-clone srcdir repository)
-                  (git-clone srcdir repository))))
-       (let ((current-revision (git-rev-parse srcdir "HEAD")))
-         (cond ((equal? current-revision (project-revision project)))
-               ((project-tag project)
-                (git-fetch-tag srcdir (project-tag project))
-                (git-checkout-tag srcdir (project-tag project)))
-               ((project-revision project)
-                (git-fetch srcdir)
-                (git-checkout-commit srcdir (project-revision project)))
-               (else
-                (error 'install "No revision" project))))
-       (let ((current-revision (git-rev-parse srcdir "HEAD")))
-         (print ";; INFO: Fetched revision " current-revision)
-         (unless (or (not (project-revision project))
-                     (equal? current-revision (project-revision project)))
-           (error 'install "Tag does not match revision" (project-tag project)
-                  (project-revision project)))))
-      (('directory dir)
-       (unless (file-directory? dir)
-         (error 'install "Directory does not exist" project)))
-      (else
-       (error 'install "Unsupported project source" (project-source project))))))
 
 ;; Install a project and return a alist of artifact/asset => filename.
 (define (install-project project)
@@ -404,8 +414,54 @@
         (display "export YPSILON_SITELIB=\"$PWD/.akku/lib\"\n" p)
         (display "export PATH=$PWD/.akku/bin:$PATH\n" p)))))
 
-(define (install lockfile-location dev?)
-  (let ((project-list (parse-lockfile lockfile-location dev?))
+(define (install-file-list installed-files)
+  (define printed-files (make-hashtable string-hash string=?))
+  (define (installed-type a)
+    (cond ((r6rs-library? a) 'r6rs-library)
+          ((r6rs-program? a) 'r6rs-program)
+          ((module? a) 'module)
+          ((legal-notice-file? a) 'legal-notice-file)
+          ((include-reference? a) 'included-file)
+          ((generic-file? a) 'generic-file)
+          ((artifact? a) 'artifact)
+          (else 'unknown)))
+  (let ((filename (file-list-filename)))
+    (print ";; INFO: Writing " filename)
+    (mkdir/recursive (akku-directory))
+    (call-with-port (open-file-output-port filename
+                                           (file-options no-fail)
+                                           (buffer-mode block)
+                                           (native-transcoder))
+      (lambda (p)
+        (for-each
+         (match-lambda
+          (#(project filename*)
+           (for-each
+            (match-lambda
+             ((artifact . filename)
+              (cond ((hashtable-ref printed-files filename #f)
+                     => (match-lambda
+                         ((other-project . other-artifact)
+                          (print ";; INFO: File " filename  " in "
+                                 (project-name other-project)
+                                 " shadows that from " (project-name project)))))
+                    (else
+                     (hashtable-set! printed-files filename (cons project artifact))
+                     (display filename p)
+                     (display #\tab p)
+                     (display (if (string=? (project-name project) "")
+                                  "-"
+                                  (project-name project))
+                              p)
+                     (display #\tab p)
+                     (display (installed-type artifact) p)
+                     (display #\tab p)
+                     (newline p)))))
+            (reverse filename*))))
+         (reverse installed-files))))))
+
+(define (install lockfile-location)
+  (let ((project-list (read-lockfile lockfile-location))
         (current-project (make-project "" #f '(directory ".") #f #f)))
     (mkdir/recursive (akku-directory))
     (let ((gitignore (path-join (akku-directory) ".gitignore")))
@@ -414,6 +470,9 @@
           (lambda (p)
             (display (sources-directory*) p)))))
     (for-each fetch-project project-list)
-    (for-each install-project project-list)
-    (install-project current-project)
+    (let ((installed-files
+           (map-in-order (lambda (project)
+                           (vector project (install-project project)))
+                         (append project-list (list current-project)))))
+      (install-file-list installed-files))
     (install-activate-script))))

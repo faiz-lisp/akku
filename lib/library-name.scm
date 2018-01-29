@@ -1,5 +1,5 @@
 ;;; Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
-;;; Copyright © 2017 Göran Weinholt <goran@weinholt.se>
+;;; Copyright © 2017, 2018 Göran Weinholt <goran@weinholt.se>
 ;;; SPDX-License-Identifier: MIT
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining a
@@ -28,7 +28,8 @@
     library-name->file-name/ikarus
     library-name->file-name/ironscheme
     library-name->file-name/psyntax
-    library-name->file-name/racket)
+    library-name->file-name/racket
+    library-name->file-name-variants)
   (import
     (rnrs (6))
     (only (rnrs r5rs) quotient remainder)
@@ -163,4 +164,23 @@
   (let ((name (library-name->file-name/ikarus ls)))
     (if (null? (cdr ls))
         (string-append name "/main")
-        name))))
+        name)))
+
+(define (library-name->file-name-variants implementation)
+  (case implementation
+    ((chezscheme)
+     (list library-name->file-name/chezscheme))
+    ((ikarus)
+     (list library-name->file-name/ikarus))
+    ((ironscheme)
+     (list library-name->file-name/ironscheme))
+    ((mzscheme)
+     (list library-name->file-name/racket))
+    (else
+     ;; If the library is not implementation-dependent, then it
+     ;; could be loaded from any one of these filenames.
+     (list library-name->file-name/chezscheme
+           library-name->file-name/ikarus
+           library-name->file-name/ironscheme
+           library-name->file-name/psyntax
+           library-name->file-name/racket)))))

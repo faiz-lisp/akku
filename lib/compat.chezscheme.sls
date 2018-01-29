@@ -22,6 +22,7 @@
     mkdir
     chmod
     rename-file
+    symlink
     putenv
     system
     process
@@ -30,10 +31,19 @@
     file-regular?
     file-directory?
     file-symbolic-link?
+    file-exists/no-follow?
     pretty-print)
   (import
-    (rnrs (6))
+    (except (rnrs (6)) file-exists?)
     (only (chezscheme) cd mkdir chmod putenv rename-file
           system process open-process-ports directory-list
           file-regular? file-directory? file-symbolic-link?
-          pretty-print)))
+          pretty-print file-exists?))
+
+  (define (file-exists/no-follow? filename)
+    (file-exists? filename #f))
+
+  (define (symlink from to)
+    (putenv "AKKU_FROM" from)
+    (putenv "AKKU_TO" to)
+    (assert (zero? (system "ln -s -r \"$AKKU_FROM\" \"$AKKU_TO\"")))))

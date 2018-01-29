@@ -24,6 +24,7 @@
     artifact? artifact-path artifact-path-list artifact-form-index
     artifact-imports artifact-assets artifact-implementation
     artifact-for-test? artifact-internal? artifact-for-bin?
+    artifact-directory artifact-filename
     make-generic-file generic-file?
     make-legal-notice-file legal-notice-file?
     r6rs-library? r6rs-library-name r6rs-library-version r6rs-library-exports
@@ -45,13 +46,11 @@
 
 (define rx-legal-notice-filename     ;relative to the root of the repo
   (rx (w/nocase
-       (or "AUTHORS" "CREDITS" "CONTRIBUTORS" "THANKS"
+       (or (: (or "AUTHORS" "CREDITS" "CONTRIBUTORS" "DISCLAIMERS" "THANKS")
+              (* (~ "/")))
            "debian/copyright"
            ;; https://reuse.software/practices/
-           (: "LICENSE" (* (~ "/")))
-           (: "LICENCE" (* (~ "/")))
-           (: "COPYING" (* (~ "/")))
-           (: "COPYRIGHT" (* (~ "/")))
+           (: (or "LICENSE" "LICENCE" "COPYING" "COPYRIGHT") (* (~ "/")))
            (: "LICENSES/" (* any))))))
 
 (define-record-type artifact
@@ -105,6 +104,16 @@
           original-include-spec)
   (sealed #t)
   (nongenerative))
+
+(define (artifact-directory artifact)
+  (match (string-split (artifact-path artifact) #\/)
+    ((fn) "")
+    ((dir* ... _fn) (fold-left path-join (car dir*) (cdr dir*)))))
+
+(define (artifact-filename artifact)
+  (match (string-split (artifact-path artifact) #\/)
+    ((fn) fn)
+    ((_dir* ... fn) fn)))
 
 ;; Does the file appear to be part of a test suite?
 (define (artifact-for-test? artifact)

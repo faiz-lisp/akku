@@ -25,7 +25,8 @@
     string-prefix? string-suffix? string-index
     string-split
     mkdir/recursive split-path path-join
-    read-shebang)
+    read-shebang
+    pipe-ports)
   (import
     (rnrs (6))
     (rnrs mutable-pairs (6))
@@ -82,4 +83,18 @@
              line1)
             (else
              (set-port-position! port start)
-             #f))))))
+             #f)))))
+
+;; Copy all data to the port `outp` from `inp`.
+(define (pipe-ports outp inp)
+  (if (textual-port? outp)
+      (let lp ()
+        (let ((buf (get-string-n inp (* 16 1024))))
+          (unless (eof-object? buf)
+            (put-string outp buf)
+            (lp))))
+      (let lp ()
+        (let ((buf (get-bytevector-n inp (* 16 1024))))
+          (unless (eof-object? buf)
+            (put-bytevector outp buf)
+            (lp)))))))

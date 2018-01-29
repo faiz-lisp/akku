@@ -6,8 +6,10 @@
 
 ;;; Linux build script for Akku.scm
 
-(import (chezscheme)
-        (only (akku lib utils) string-split path-join mkdir/recursive))
+(import
+  (chezscheme)
+  (only (akku lib utils) string-split path-join mkdir/recursive)
+  (semver versions))
 
 (define (which filename)                ;same as which(1)
   (let lp ((dirs (string-split (or (getenv "PATH") "") #\:)))
@@ -37,7 +39,10 @@
 (define (copy-chez-notice target)
   ;; Apache License 2.0 requires LICENSE and NOTICE to be included in
   ;; redistributions.
-  (cond ((let ((dir (or (getenv "CHEZSOURCEDIR")
+  (cond ((and (file-exists? "/usr/share/doc/chezscheme/copyright")
+              (file-exists? "/usr/share/doc/chezscheme/changelog.Debian.gz"))
+         (cp "/usr/share/doc/chezscheme/copyright" target))
+        ((let ((dir (or (getenv "CHEZSOURCEDIR")
                         (begin
                           (display "Please enter the location of the Chez Scheme source: ")
                           (get-line (current-input-port))))))
@@ -60,6 +65,20 @@
          (putenv "TARGET_FILE" target)
          (system "curl \"$NOTICE_URL\" \"$LICENSE_URL\" > \"$TARGET_FILE\"")))
   (assert (file-exists? target)))
+
+(define (copy-notices target source)
+  (call-with-output-file target
+    (lambda (outp)
+      (let-values (((to-stdin from-stdout from-stderr _process-id)
+                    (open-process-ports
+                     (string-append "bin/akku license-scan " source)
+                     (buffer-mode block)
+                     (native-transcoder))))
+        (when (port-eof? from-stdout)
+          (error 'copy-notices "Blank output from "))
+        (put-string outp (get-string-all from-stdout))
+        (display (get-string-all from-stderr))
+        (close-port to-stdin)))))
 
 (assert (not (petite?)))
 
@@ -90,9 +109,9 @@
       (machine (symbol->string (machine-type)))
       (long-machine-type
        (case (machine-type)
-         ((a6le ta6le) "linux.amd64")
-         ((i3le ti3le) "linux.i386")
-         ((arm32le tarm32le) "linux.arm")
+         ((a6le ta6le) "amd64-linux")
+         ((i3le ti3le) "i386-linux")
+         ((arm32le tarm32le) "arm-linux")
          (else
           (symbol->string (machine-type)))))
       (akku-version (get-version "Akku.manifest")))
@@ -120,9 +139,10 @@
         (chmod dist-petite #o755))
       (ln/s "petite" (format #f "dist/bin/~d/scheme-script" machine))
       (cp "bin/akku" (format #f "dist/bin/~d/akku"  machine))
-      ;; Licenses and copyrights
-      (cp "COPYING" "dist/doc")
+      ;; Licenses, copyrights, etc
       (copy-chez-notice "dist/doc/ChezScheme.txt")
+      (copy-notices "dist/doc/copyright.txt" "bin/akku.sps")
+      (cp "README.md" "dist/doc")
       ;; Install script
       (call-with-output-file "dist/install.sh"
         (lambda (p)
@@ -143,6 +163,8 @@
       ;; Build a tarball.
       (let* ((build-version (format #f "~d+~d" akku-version long-machine-type))
              (tarfile (format #f "akku-~d.tar.gz" build-version)))
+        (assert (string->semver akku-version))
+        (assert (string->semver build-version))
         (putenv "FILENAME" tarfile)
         (putenv "DISTVER" build-version)
         (system "tar --numeric-owner --owner 0 --group 0 -cvzf \"$FILENAME\" --transform s,^dist,akku-$DISTVER, dist/")

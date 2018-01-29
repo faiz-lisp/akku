@@ -89,10 +89,15 @@ be fixed).
 Here are some practices you can try to follow in your life, to make
 life easier for everyone else, regardless of package manager:
 
+ - Choose reasonably unique library names whose symbols contain only
+   A-Z, a-z, 0-9 and hyphen. Names should be unique even when compared
+   case insensitively. Other names are not portable between Schemes
+   and operating systems.
  - Use semantic versioning and publish releases of your project:
    https://semver.org/
  - Tag releases in your source code repository (e.g. 1.0.0 is tagged
-   with v1.0.0): https://help.github.com/articles/creating-releases/
+   with v1.0.0): https://help.github.com/articles/creating-releases/.
+   Please use `git tag -s` to sign your tags.
  - Clearly identify the licenses of the code you distribute:
    https://reuse.software/practices/. If no license is declared then
    the default of copyright law applies, which is that no license at
@@ -100,7 +105,7 @@ life easier for everyone else, regardless of package manager:
 
 ## API
 
-Akku.scm uses Semantic Versioning for its releases, and so needs to
+Akku.scm uses semantic versioning for its releases, and so needs to
 declare an API. The libraries that are part of Akku.scm are currently
 not part of the API. The only stable API right now is the command line
 interface.
@@ -111,12 +116,3 @@ Akku.scm is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation, either version 3 of the License, or (at your
 option) any later version.
-
-## Credits
-
-Akku.scm uses the dependency solver from aptitude. The code is
-originally copyrighted by Daniel Burrows and ported to Scheme by
-Andreas Rottman as port of Dorodongo.
-
-Akku.scm also uses numerous SRFIs and other libraries, all of which
-can be found referenced in the Akku.lock file.
