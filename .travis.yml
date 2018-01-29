@@ -1,7 +1,7 @@
 env:
   matrix:
     - SCHEME="ChezScheme_master"
-    - SCHEME="ChezScheme_9.5"
+    - SCHEME="ChezScheme_v9.5"
     - SCHEME="Guile_2.2"
     - SCHEME="Larceny"
     - SCHEME="Racket_HEAD"
@@ -10,6 +10,7 @@ env:
 
 matrix:
   allow_failures:
+    - env: SCHEME="ChezScheme_master"
     - env: SCHEME="Guile_2.2"
     - env: SCHEME="Larceny"
     - env: SCHEME="Racket_HEAD"

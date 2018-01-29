@@ -75,7 +75,8 @@
                      (buffer-mode block)
                      (native-transcoder))))
         (when (port-eof? from-stdout)
-          (error 'copy-notices "Blank output from "))
+          (error 'copy-notices "Blank output from license-scan" source
+                 (get-string-all from-stderr)))
         (put-string outp (get-string-all from-stdout))
         (display (get-string-all from-stderr))
         (close-port to-stdin)))))
@@ -141,7 +142,12 @@
       (cp "bin/akku" (format #f "dist/bin/~d/akku"  machine))
       ;; Licenses, copyrights, etc
       (copy-chez-notice "dist/doc/ChezScheme.txt")
-      (copy-notices "dist/doc/copyright.txt" "bin/akku.sps")
+      (guard (exn
+              ((and (who-condition? exn)
+                    (eq? (condition-who exn) 'copy-notices))
+               (display "WARNING: Could not gather copyright notices\n"
+                        (current-error-port))))
+        (copy-notices "dist/doc/copyright.txt" "bin/akku.sps"))
       (cp "README.md" "dist/doc")
       ;; Install script
       (call-with-output-file "dist/install.sh"

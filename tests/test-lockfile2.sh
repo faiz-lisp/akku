@@ -11,12 +11,11 @@ cat > "$WORKDIR/Akku.lock" <<EOF
 (import (akku format lockfile))
 (projects
  ((name "test-project-rev")
-  (packages (test-project))
   (location (git "file://$WORKDIR/test-project"))
   (revision "e191670f7a700a8da869f297920c21ca32059faa"))
  ((name "test-project-tag")
-  (packages)
   (location (git "file://$WORKDIR/test-project"))
+  (revision "fb8f0f5bf52bc807d9b667757f133fadaca3b050")
   (tag "v0.2.0")))
 EOF
 
