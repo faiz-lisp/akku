@@ -1,6 +1,7 @@
 env:
   matrix:
     - SCHEME="ChezScheme_master"
+    - SCHEME="ChezScheme_9.5"
     - SCHEME="Guile_2.2"
     - SCHEME="Larceny"
     - SCHEME="Racket_HEAD"
