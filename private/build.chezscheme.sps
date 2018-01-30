@@ -149,6 +149,9 @@
                         (current-error-port))))
         (copy-notices "dist/doc/copyright.txt" "bin/akku.sps"))
       (cp "README.md" "dist/doc")
+      ;; Bootstrap data
+      (mkdir/recursive "dist/share")
+      (cp "bootstrap.db" "dist/share/bootstrap.db")
       ;; Install script
       (call-with-output-file "dist/install.sh"
         (lambda (p)
@@ -156,7 +159,7 @@
           (format p "PREFIX=$HOME/.akku~%")
           (format p "MACHINE=~d~%" machine)
           (format p "mkdir -p $PREFIX~%")
-          (format p "cp -a bin boot $PREFIX/~%")
+          (format p "cp -a bin boot share $PREFIX/~%")
           (format p "cat > $PREFIX/bin/akku << EOF~%")
           (format p "#!/bin/sh~%")
           (format p "exec $PREFIX/bin/$MACHINE/petite -b $PREFIX/boot/$MACHINE/petite.boot --program $PREFIX/bin/$MACHINE/akku \\$*~%")

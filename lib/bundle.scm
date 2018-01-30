@@ -136,7 +136,8 @@
 ;; would be great if this printed SPDX documents.
 (define (license-scan filenames implementations)
   (define rx-copyright-start
-    (rx (w/nocase bow (or "copyright" "(c)" "©" "public domain")
+    (rx (w/nocase bow (or "copyright" "(c)" "©" "public domain"
+                          "SPDX-License-Identifier")
                   eow)))
   (define rx-code-start
     (rx (* space)
@@ -148,6 +149,8 @@
             ";; --"
             "; --"
             ";;@"
+            ";;>"
+            ";;;;;;;;"
             "\f")
         (* any)))
   (define rx-code-line

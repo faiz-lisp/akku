@@ -25,6 +25,7 @@
     chmod
     rename-file
     symlink
+    getenv
     putenv
     system
     process
@@ -57,6 +58,9 @@
 
 (define (rename-file old new)               ;atomic overwriting file rename
   (error 'rename-file "Please implement (akku lib compat)"))
+
+(define (getenv name)
+  (error 'getenv "Please implement (akku lib compat)"))
 
 (define (putenv name value)
   (display "export " (current-error-port))

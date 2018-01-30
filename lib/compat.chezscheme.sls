@@ -23,6 +23,7 @@
     chmod
     rename-file
     symlink
+    getenv
     putenv
     system
     process
@@ -35,7 +36,7 @@
     pretty-print)
   (import
     (except (rnrs (6)) file-exists?)
-    (only (chezscheme) cd mkdir chmod putenv rename-file
+    (only (chezscheme) cd mkdir chmod getenv putenv rename-file
           system process open-process-ports directory-list
           file-regular? file-directory? file-symbolic-link?
           pretty-print file-exists?))

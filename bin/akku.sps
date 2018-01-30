@@ -26,6 +26,7 @@
   (akku lib init)
   (akku lib install)
   (akku lib lock)
+  (only (akku lib utils) path-join application-home-directory)
   (rnrs (6)))
 
 (define (simple-log-formatter entry)
@@ -65,9 +66,18 @@ Advanced usage:
     (cmd-help))
   (unless (file-exists? manifest-filename)
     (error 'install "The manifest must exist first" manifest-filename))
-  (lock-dependencies manifest-filename
-                     lockfile-filename
-                     "index.db"))
+  (let ((index (path-join (application-home-directory) "share/index.db"))
+        (bootstrap (path-join (application-home-directory) "share/bootstrap.db")))
+    (let ((index-filename
+           (cond ((file-exists? index) index)
+                 ((file-exists? bootstrap) bootstrap)
+                 ((and (file-exists? "bootstrap.db") (file-exists? "bin/akku.sps"))
+                  ;; Running from the Akku repository
+                  "bootstrap.db")
+                 (else (error 'cmd-lock "Unable to locate the package index")))))
+      (lock-dependencies manifest-filename
+                         lockfile-filename
+                         index-filename))))
 
 (define (cmd-install arg*)
   (unless (null? arg*)
