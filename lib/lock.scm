@@ -33,6 +33,7 @@
     (spdx parser)
     (spells logging)
     (wak fmt)
+    (wak fmt color)
     (xitomatl alists)
     (xitomatl AS-match)
     (only (akku lib compat) pretty-print rename-file getcwd)
@@ -362,8 +363,41 @@
     (if (file-exists? manifest-filename)
         (read-manifest manifest-filename)
         '()))
+  (define lock-spec*         ;FIXME: move to a common parser lib
+    (if (file-exists? lockfile-filename)
+        (call-with-input-file lockfile-filename
+          (lambda (p)
+            (let lp ((ret '()))
+              (match (read p)
+                ((? eof-object?) ret)
+                (('projects . prj*)
+                 (lp (append (map (match-lambda
+                                   [(('name name) . lock-spec)
+                                    lock-spec])
+                                  prj*)
+                             ret)))
+                (_ (lp ret))))))
+        '()))
+  (define deps                          ;package name -> (type . range)
+    (let ((deps (make-hashtable equal-hash equal?)))
+      (for-each
+       (lambda (pkg)
+         (define (set-ranges type depends)
+           (for-each
+            (match-lambda
+             [(package-name range)
+              (hashtable-set! deps package-name
+                              (cons type (semver-range->matcher range)))])
+            depends))
+         (let ((v (car (package-version* pkg)))) ;manifest has a single version
+           (set-ranges 'depends (version-depends v))
+           (set-ranges 'depends/dev (version-depends/dev v))))
+       manifest-packages)
+      deps))
   (let-values (((_ packages) (read-package-index index-filename '())))
-    (fmt #t (space-to 3) "Package name"
+    (fmt #t ",-- (L) The version is in the lockfile" nl
+            "|,- (M) The version matches the range in the manifest / (D) Dev. dependency" nl)
+    (fmt #t "||" (space-to 3) "Package name"
          (space-to 25) "SemVer"
          nl
          (pad-char #\= (space-to 78))
@@ -375,8 +409,25 @@
          (let ((package (hashtable-ref packages package-name #f)))
            (for-each
             (lambda (version)
-              (fmt #t (space-to 3) package-name
-                   (space-to 25) (version-number version)
-                   nl))
+              (let ((version-locked? (member (version-lock version) lock-spec*))
+                    (manifest-match (cond ((hashtable-ref deps package-name #f)
+                                           => (match-lambda
+                                               ((type . range-matcher)
+                                                (if (range-matcher (version-semver version))
+                                                    (if (eq? type 'depends) "M" "D")
+                                                    #f))))
+                                          (else #f))))
+                (let ((colorize (cond ((and version-locked? manifest-match)
+                                       (lambda (x) (fmt-bold (fmt-green x))))
+                                      (manifest-match fmt-green)
+                                      (version-locked? fmt-cyan)
+                                      (else (lambda (x) x)))))
+                  (fmt #t
+                       (if version-locked? "L" "")
+                       (space-to 1)
+                       (or manifest-match "")
+                       (space-to 3) package-name
+                       (space-to 25) (colorize (version-number version))
+                       nl))))
             (package-version* package))))
        package-names)))))
