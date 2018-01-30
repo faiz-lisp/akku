@@ -11,4 +11,7 @@ fi
 tests/test-lockfile1.sh
 tests/test-lockfile2.sh
 
+akku list
+akku lock
+
 echo All tests passed
