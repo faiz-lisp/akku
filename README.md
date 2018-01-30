@@ -29,9 +29,6 @@ manager with these properties, in no particular order:
 * No automatic code execution from packages on installation.
 * Verification of downloads and review tools when updating
   dependencies.
-
-Upcoming:
-
 * Easy bundling/compilation of programs along with all dependencies.
 * Usable offline (and only going to the Internet after asking for
   permission).
@@ -44,7 +41,8 @@ have a modicum of usefulness every step along the way.
 ## Dependencies
 
 Akku.scm currently requires the git and curl programs. It has only
-been tested on GNU/Linux systems.
+been tested on GNU/Linux systems. Assistance in porting is very
+welcome.
 
 ## Usage
 

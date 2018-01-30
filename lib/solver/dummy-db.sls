@@ -48,7 +48,7 @@
    (version-count 0)
    (dependency-count 0)
    (dependencies '())
-   (package-table (make-hashtable string-hash string=?))))
+   (package-table (make-hashtable equal-hash equal?))))
 
 (define (dummy-db-version-ref db name version-tag)
   (find-version/assert (dummy-db-package db name) version-tag))

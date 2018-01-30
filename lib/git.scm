@@ -1,5 +1,5 @@
 ;; -*- mode: scheme; coding: utf-8 -*-
-;; Copyright © 2017 Göran Weinholt <goran@weinholt.se>
+;; Copyright © 2017-2018 Göran Weinholt <goran@weinholt.se>
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -41,13 +41,13 @@
   (putenv "GIT_DIR" ".git")
   (putenv "AKKU_DIR" directory)
   (putenv "AKKU_REPO" repository)
-  (assert (zero? (system "set -x;git clone -q \"$AKKU_REPO\" \"$AKKU_DIR\""))))
+  (assert (zero? (system "set -x;git clone \"$AKKU_REPO\" \"$AKKU_DIR\""))))
 
 (define (git-shallow-clone directory repository)
   (putenv "GIT_DIR" ".git")
   (putenv "AKKU_DIR" directory)
   (putenv "AKKU_REPO" repository)
-  (assert (zero? (system "set -x;git clone --single-branch --depth=1 -q \"$AKKU_REPO\" \"$AKKU_DIR\""))))
+  (assert (zero? (system "set -x;git clone --single-branch --depth=1 \"$AKKU_REPO\" \"$AKKU_DIR\""))))
 
 (define (git-fetch directory)
   (putenv "GIT_DIR" ".git")

@@ -20,11 +20,14 @@
 
 (library (akku lib lock)
   (export
+    add-dependency
     lock-dependencies
+    list-packages
     logger:akku.lock)
   (import
     (rnrs (6))
     (only (srfi :1 lists) iota append-map filter-map)
+    (only (srfi :67 compare-procedures) <? default-compare)
     (semver versions)
     (semver ranges)
     (spdx parser)
@@ -32,13 +35,14 @@
     (wak fmt)
     (xitomatl alists)
     (xitomatl AS-match)
-    (only (akku lib compat) pretty-print rename-file)
+    (only (akku lib compat) pretty-print rename-file getcwd)
     (akku lib solver)
     (akku lib solver choice)
     (akku lib solver dummy-db)          ;TODO: Make a proper database
     (only (akku lib solver internals) make-universe)
     (only (akku lib solver logging) dsp-universe)
     (only (akku private utils) make-fmt-log logger:akku)
+    (only (akku lib utils) split-path)
     (prefix (akku lib solver universe) universe-))
 
 (define logger:akku.lock (make-logger logger:akku 'lock))
@@ -174,24 +178,27 @@
        (append-map lp pkg*)]
       [(name (? string? range))
        ;; TODO: Don't crash when the depended-on package doesn't
-       ;; exist. Don't crash when no versions are in the range.
-       (let* ((available-version* (package-version*
-                                   (hashtable-ref packages name 'FIXME:no-such-pkg)))
-              (m (semver-range->matcher range))
-              (tag* (filter-map
-                     (lambda (tag pkgver)
-                       (and (m (version-semver pkgver)) tag))
-                     (iota (length available-version*))
-                     available-version*)))
-         (when (null? tag*)
-           (error 'dependencies->version-tags "TODO: No matching versions"
-                  (package-name pkg)
-                  name
-                  (semver-range->string (semver-range-desugar (string->semver-range range)))
-                  (map version-number available-version*)))
-         ;; To satisfy the dependency, any of these (name . tag) pairs
-         ;; can be used.
-         (map (lambda (tag) (cons name tag)) tag*))])))
+       ;; exist.
+       (let ((package (hashtable-ref packages name #f)))
+         (unless package
+           (error 'dependencies->version-tags "No such package in the index" name))
+         (let* ((available-version* (package-version* package))
+                (m (semver-range->matcher range))
+                (tag* (filter-map
+                       (lambda (tag pkgver)
+                         (and (m (version-semver pkgver)) tag))
+                       (iota (length available-version*))
+                       available-version*)))
+           (when (null? tag*)
+             ;; TODO: Don't crash when no versions are in the range.
+             (error 'dependencies->version-tags "No matching versions"
+                    (package-name pkg)
+                    name
+                    (semver-range->string (semver-range-desugar (string->semver-range range)))
+                    (map version-number available-version*)))
+           ;; To satisfy the dependency, any of these (name . tag) pairs
+           ;; can be used.
+           (map (lambda (tag) (cons name tag)) tag*)))])))
 
 ;; Adds dependencies between packages.
 (define (add-package-dependencies db packages manifest-packages dev-mode?)
@@ -264,4 +271,112 @@
                         (log/info "Rejected solution, trying the next...")
                         (lp)))))
               (else
-               (error 'lock-dependencies "No acceptable solution - dependency hell"))))))))))
+               (error 'lock-dependencies "No acceptable solution - dependency hell")))))))))
+
+;; Adds a dependency to the manifest. FIXME: needs to be moved to
+;; somewhere else.
+(define (add-dependency manifest-filename index-filename dev? dep-name dep-range)
+  (define (write-manifest manifest-filename akku-package*)
+    (call-with-port (open-file-output-port
+                     (string-append manifest-filename ".tmp")
+                     (file-options no-fail)
+                     (buffer-mode block)
+                     (native-transcoder))
+      (lambda (p)
+        (display "#!r6rs ; -*- mode: scheme; coding: utf-8 -*-\n" p)
+        (write '(import (akku format manifest)) p)
+        (display "\n\n" p)
+        (for-each (lambda (pkg)
+                    ;; Pretty print is not good enough
+                    (pretty-print pkg p))
+                  akku-package*)))
+    (rename-file (string-append manifest-filename ".tmp") manifest-filename)
+    (log/info "Wrote " manifest-filename))
+  (define (update-manifest manifest-filename proc)
+    (let ((akku-package*
+           (call-with-input-file manifest-filename
+             (lambda (p)
+               (let lp ((pkg* '()))
+                 (match (read p)
+                   ((and ('akku-package (_ _) . _) akku-package)
+                    (cons (proc akku-package) pkg*))
+                   ((? eof-object?) pkg*)
+                   (else (lp pkg*))))))))
+      (write-manifest manifest-filename (reverse akku-package*))))
+  (define manifest-packages
+    (if (file-exists? manifest-filename)
+        (read-manifest manifest-filename)
+        '()))
+  (define (get-suitable-range version*)
+    (let ((semver* (map version-semver version*)))
+      (let lp ((semver* semver*) (highest (car semver*)))
+        (cond ((null? semver*)
+               (string-append "~" (semver->string highest)))
+              ((and (<? semver-compare highest (car semver*))
+                    ;; If highest is stable, then don't select a
+                    ;; pre-release.
+                    (not (and (null? (semver-pre-release-ids highest))
+                              (not (null? (semver-pre-release-ids (car semver*)))))))
+               (lp (cdr semver*) (car semver*)))
+              (else
+               (lp (cdr semver*) highest))))))
+  (let-values (((_ packages) (read-package-index index-filename manifest-packages)))
+    (cond
+      ((hashtable-ref packages dep-name #f)
+       => (lambda (package)
+            (let ((package-name (package-name package))
+                  (range (or dep-range (get-suitable-range (package-version* package)))))
+              (log/info "Adding " package-name "@" range " to " manifest-filename "...")
+              (cond ((file-exists? manifest-filename)
+                     (update-manifest
+                      manifest-filename
+                      (match-lambda
+                       (('akku-package (name version) prop* ...)
+                        `(akku-package
+                          (,name ,version)
+                          ,@(assq-update prop*
+                                         (if dev? 'depends/dev 'depends)
+                                         (lambda (prev)
+                                           (assoc-replace prev package-name
+                                                          (list range)))
+                                         '()))))))
+                    (else
+                     ;; XXX: This is a manifest that can actually be
+                     ;; used immediately, unlike the one in init.
+                     (write-manifest
+                      manifest-filename
+                      `((akku-package
+                         (,(string-downcase (cdr (split-path (getcwd))))
+                          "0.0.0-alpha.0")
+                         (synopsis "I did not edit Akku.manifest")
+                         (authors "K. Programistova <schemer@example.com>")
+                         (license "NOASSERTION")
+                         (,(if dev? 'depends/dev 'depends)
+                          (,package-name ,range))))))))))
+      (else
+       (error 'add-dependency "Package not found" package-name)))))
+
+;; Lists packages in the index.
+(define (list-packages manifest-filename lockfile-filename index-filename)
+  (define manifest-packages
+    (if (file-exists? manifest-filename)
+        (read-manifest manifest-filename)
+        '()))
+  (let-values (((_ packages) (read-package-index index-filename '())))
+    (fmt #t (space-to 3) "Package name"
+         (space-to 25) "SemVer"
+         nl
+         (pad-char #\= (space-to 78))
+         nl)
+    (let ((package-names (hashtable-keys packages)))
+      (vector-sort! (lambda (x y) (<? default-compare x y)) package-names)
+      (vector-for-each
+       (lambda (package-name)
+         (let ((package (hashtable-ref packages package-name #f)))
+           (for-each
+            (lambda (version)
+              (fmt #t (space-to 3) package-name
+                   (space-to 25) (version-number version)
+                   nl))
+            (package-version* package))))
+       package-names)))))

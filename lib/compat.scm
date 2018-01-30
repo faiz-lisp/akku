@@ -21,6 +21,7 @@
 (library (akku lib compat)
   (export
     cd
+    (rename (cd getcwd))
     mkdir
     chmod
     rename-file

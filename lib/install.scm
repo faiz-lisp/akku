@@ -25,6 +25,7 @@
     make-r6rs-library-filenames)
   (import
     (rnrs (6))
+    (only (srfi :13 strings) string-index)
     (only (rnrs r5rs) quotient remainder)
     (only (xitomatl common) pretty-print)
     (xitomatl alists)
@@ -51,6 +52,30 @@
 (define (sources-directory)
   (path-join (akku-directory) (sources-directory*)))
 
+(define (project-sanitized-name project)
+  ;; Turns a project name into that works as a directory name.
+  (define hex "0123456789abcdefgh")
+  (let ((dirname (if (string? (project-name project))
+                     (project-name project)
+                     (call-with-string-output-port
+                       (lambda (p)
+                         (display (project-name project) p))))))
+    (call-with-string-output-port
+      (lambda (p)
+        (do ((bv (string->utf8 (string-normalize-nfc dirname)))
+             (i 0 (fx+ i 1)))
+            ((fx=? i (bytevector-length bv)))
+          (let* ((b (bytevector-u8-ref bv i))
+                 (c (integer->char b)))
+            (cond ((and (char>=? c #\space) (char<? c #\delete)
+                        (not (string-index "<>:\"/\\|?*~" c)))
+                   (put-char p c))
+                  (else
+                   (let-values (((n0 n1) (fxdiv-and-mod b 16)))
+                     (put-char p #\%)
+                     (put-char p (string-ref hex n0))
+                     (put-char p (string-ref hex n1)))))))))))
+
 (define (project-source-directory project)
   (match (project-source project)
     (('directory dir)
@@ -58,7 +83,7 @@
      dir)
     (else
      ;; Otherwise a local src directory must be created.
-     (path-join (sources-directory) (project-name project)))))
+     (path-join (sources-directory) (project-sanitized-name project)))))
 
 (define (binaries-directory)
   (path-join (akku-directory) "bin"))
@@ -68,29 +93,33 @@
 
 (define (notices-directory project)
   (path-join (path-join (akku-directory) "notices")
-             (project-name project)))
+             (project-sanitized-name project)))
 
 (define (file-list-filename)
   (path-join (akku-directory) "list"))
 
 (define-record-type project
   (fields name packages source
+          installer                     ;for future extensions
           ;; one of these:
           tag revision)
   (sealed #t)
   (nongenerative))
 
 (define (parse-project spec)
-  (let ((tag (cond ((assq 'tag spec) => cadr) (else #f)))
+  (let ((name (car (assq-ref spec 'name)))
+        (tag (cond ((assq 'tag spec) => cadr) (else #f)))
         (revision (car (assq-ref spec 'revision)))
         (location (assq 'location spec)))
+    (assert (not (char=? (string-ref name 0) #\()))
     (match location
       (('location ('directory _))
        #f)
       (else #f))
-    (make-project (car (assq-ref spec 'name))
+    (make-project name
                   (cond ((assq 'install spec) => cdr) (else #f))
                   (car (assq-ref spec 'location))
+                  (assq-ref spec 'installer '((r6rs)))
                   tag revision)))
 
 ;; Parse a lockfile, returning a list of project records.
@@ -99,6 +128,8 @@
     (lambda (p)
       (unless (equal? (read p) '(import (akku format lockfile)))
         (error 'read-lockfile "Invalid lockfile (wrong import)" lockfile-location))
+      ;; TODO: More sanity checking. The names need to be
+      ;; case-insensitively unique.
       (let lp ((project* '()))
         (match (read p)
           ((? eof-object?)
@@ -140,7 +171,8 @@
        (unless (file-directory? dir)
          (error 'install "Directory does not exist" project)))
       (else
-       (error 'install "Unsupported project source" (project-source project))))))
+       (error 'install "Unsupported project source: upgrade Akku.scm"
+              (project-source project) (project-name project))))))
 
 (define (check-filename filename windows?)
   ;; Protection against path traversal attacks and other types of
@@ -374,21 +406,27 @@
     ;; Copy libraries, programs and assets to the file system. These
     ;; operations are ordered.
     (print ";; INFO: Installing " (project-name project) " ...")
-    (let* ((artifact* (filter (lambda (artifact)
-                                (not (artifact-for-test? artifact)))
-                              (find-artifacts srcdir #f)))
-           (asset* (append-map artifact-assets artifact*))) ;XXX: may have duplicates
-      (let ((artifact-filename*
-             (map-in-order (lambda (artifact)
-                             (map (lambda (fn) (cons artifact fn))
-                                  (install-artifact project artifact srcdir)))
-                           artifact*))
-            (asset-filename*
-             (map-in-order (lambda (asset)
-                             (map (lambda (fn) (cons asset fn))
-                                  (install-asset asset)))
-                           asset*)))
-        (append (apply append artifact-filename*) (apply append asset-filename*))))))
+    (cond
+      ((equal? (project-installer project) '((r6rs)))
+       (let* ((artifact* (filter (lambda (artifact)
+                                   (not (artifact-for-test? artifact)))
+                                 (find-artifacts srcdir #f)))
+              (asset* (append-map artifact-assets artifact*))) ;XXX: may have duplicates
+         (let ((artifact-filename*
+                (map-in-order (lambda (artifact)
+                                (map (lambda (fn) (cons artifact fn))
+                                     (install-artifact project artifact srcdir)))
+                              artifact*))
+               (asset-filename*
+                (map-in-order (lambda (asset)
+                                (map (lambda (fn) (cons asset fn))
+                                     (install-asset asset)))
+                              asset*)))
+           (append (apply append artifact-filename*) (apply append asset-filename*)))))
+      (else
+       (print ";; ERROR: Installation of " (project-name project) " requires a newer Akku.scm")
+       (print ";; ERROR: No support for the installer " (map car (project-installer project)))
+       '()))))
 
 ;; Installs an activation script, like Python's virtualenv.
 (define (install-activate-script)
@@ -449,7 +487,7 @@
                      (hashtable-set! printed-files filename (cons project artifact))
                      (display filename p)
                      (display #\tab p)
-                     (display (if (string=? (project-name project) "")
+                     (display (if (equal? (project-name project) "")
                                   "-"
                                   (project-name project))
                               p)
@@ -462,7 +500,7 @@
 
 (define (install lockfile-location)
   (let ((project-list (read-lockfile lockfile-location))
-        (current-project (make-project "" #f '(directory ".") #f #f)))
+        (current-project (make-project "" #f '(directory ".") '((r6rs)) #f #f)))
     (mkdir/recursive (akku-directory))
     (let ((gitignore (path-join (akku-directory) ".gitignore")))
       (unless (file-exists? gitignore)
