@@ -67,15 +67,16 @@
          (string-append x "/" y))))
 
 (define (mkdir/recursive path)
-  (let ((component* (string-split path #\/)))
-    (let lp ((component* (cdr component*))
-             (dir (if (string-prefix? "/" path)
-                      "/"
-                      (car component*))))
-      (unless (file-directory? dir)
-        (mkdir dir))
-      (unless (null? component*)
-        (lp (cdr component*) (path-join dir (car component*)))))))
+  (unless (file-directory? path)
+    (let ((component* (string-split path #\/)))
+      (let lp ((component* (cdr component*))
+               (dir (if (string-prefix? "/" path)
+                        "/"
+                        (car component*))))
+        (unless (file-directory? dir)
+          (mkdir dir))
+        (unless (null? component*)
+          (lp (cdr component*) (path-join dir (car component*))))))))
 
 (define (read-shebang port)
   (let ((start (port-position port)))

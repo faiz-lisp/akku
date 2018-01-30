@@ -44,35 +44,42 @@ Akku.scm currently requires the git and curl programs. It has only
 been tested on GNU/Linux systems. Assistance in porting is very
 welcome.
 
+## Installation
+
+There are two options:
+
+ - Download, unpack and run the binary installer
+   from [GitHub](https://github.com/weinholt/akku/releases). Pre-built
+   versions are available for GNU/Linux amd64 and armhf. The
+   installation is completely contained to `~/.akku`.
+
+ - Download the source bundle
+   from [GitHub](https://github.com/weinholt/akku/releases) (with
+   `+src` in its filename). This version is a little slower to start,
+   because it is recompiled each time, but it may run on more types of
+   systems. It requires Chez Scheme 9.5 or later.
+
+Please remember to verify the OpenPGP signatures. The releases are
+signed with [E33E61A2E9B8C3A2][key].
+
+ [key]: https://pgp.surfnet.nl/pks/lookup?op=vindex&fingerprint=on&search=0xE33E61A2E9B8C3A2
+
 ## Usage
 
-Download, unpack and run the installer for the latest Akku.scm release
-from [GitHub](https://github.com/weinholt/akku/releases). Pre-built
-versions are available for GNU/Linux amd64 and armhf. (Alternatively
-clone the repository and follow the build instructions below, or
-install it manually into your Scheme library path). Please verify the
-OpenPGP signature.
+Here's a high level view of how to get started:
 
-A vague outline of how things will work:
-
- - Run `akku init` in a directory to get a suggested Akku.manifest
-   printed. (This is not quite going to give good results right now).
- - Edit the manifest.
- - Run `akku lock` to get a Akku.lock file with all dependencies.
- - Run `akku install` to install the dependencies.
+ - Create a new directory for your project or go to your existing
+   project directory. This step is important.
+ - Run `akku list` to list the packages.
+ - Run `akku install <pkg>` to install a named package. This also
+   installs the code in your current directory into `.akku`.
  - Run `source .akku/bin/activate` (in bash) to prepare the
-   environment for the programs and libraries in .akku.
+   environment for the programs and libraries in `.akku`.
 
 The installed libraries and programs should now be available to you,
 assuming you use one of these Schemes: Chez Scheme, GNU Guile (with
 R6RS settings), Ikarus, Mosh, Racket (plt-r6rs), Sagittarius, Vicare
 or Ypsilon.
-
-The install command takes care to place libraries at appropriate
-(possibly multiple) locations in the directory tree. It parses all
-libraries from the downloaded files and even supports includes.
-Downloaded binaries are installed into `.akku/bin`, which is added to
-the path by the `activate` script.
 
 ## For package authors
 

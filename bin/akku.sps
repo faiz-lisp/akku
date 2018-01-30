@@ -53,7 +53,7 @@
           (else (error 'cmd-lock "Unable to locate the package index")))))
 
 (define (cmd-help)
-  (display "akku - Scheme package manager
+  (display "Akku.scm - Scheme package manager
 
 Simple usage:
  akku list - list all packages in the index

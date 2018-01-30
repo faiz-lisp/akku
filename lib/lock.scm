@@ -309,10 +309,14 @@
         (read-manifest manifest-filename)
         '()))
   (define (get-suitable-range version*)
+    ;; TODO: This might pick a range that is not installable together
+    ;; with the rest of the currently locked packages.
     (let ((semver* (map version-semver version*)))
       (let lp ((semver* semver*) (highest (car semver*)))
         (cond ((null? semver*)
-               (string-append "~" (semver->string highest)))
+               ;; This range picks something that will stay
+               ;; compatible.
+               (string-append "^" (semver->string highest)))
               ((and (<? semver-compare highest (car semver*))
                     ;; If highest is stable, then don't select a
                     ;; pre-release.
