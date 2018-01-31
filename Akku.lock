@@ -3,7 +3,7 @@
 (import (akku format lockfile))
 (projects
   ((name "chez-srfi")
-    (location (git "https://github.com/weinholt/chez-srfi"))
+    (location (git "https://github.com/weinholt/chez-srfi.git"))
     (revision "fc892dada9f2dc707e984901829a889a526edf80"))
   ((name "hashing")
     (location (git "https://github.com/weinholt/hashing.git"))

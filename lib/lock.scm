@@ -86,18 +86,18 @@
             ((? eof-object?) #f)
             (('package ('name name)
                        ('versions version* ...))
-             (unless (memp (lambda (pkg) (equal? (package-name pkg) name))
-                           manifest-packages)
-               ;; XXX: Versions must be semver-sorted in ascending
-               ;; order.
-               (dummy-db-add-package! db name (cons #f (iota (length version*))) #f)
-               (hashtable-set! packages name
-                               (make-package name (map parse-version version*))))
+             ;; XXX: Versions must be semver-sorted in ascending
+             ;; order.
+             (dummy-db-add-package! db name (cons #f (iota (length version*))) #f)
+             (hashtable-set! packages name
+                             (make-package name (map parse-version version*)))
              (lp))
             (else (lp))))))             ;allow for future expansion
     (values db packages)))
 
-(define (read-manifest manifest-filename)
+;; Read the packages in the manifest. Optionally mangle names so they
+;; don't get mixed up with names in the index.
+(define (read-manifest manifest-filename mangle-names?)
   (call-with-input-file manifest-filename
     (lambda (p)
       (let lp ((pkg* '()) (name* '()))
@@ -110,7 +110,10 @@
            (let* ((ver (parse-version `((version ,version)
                                         (lock #f)
                                         ,@prop*)))
-                  (pkg (make-package name (list ver))))
+                  (pkg (make-package (if mangle-names?
+                                         `(in-manifest: ,name)
+                                         name)
+                                     (list ver))))
              (lp (cons pkg pkg*) (cons name name*))))
           ((? eof-object?)
            pkg*)
@@ -246,7 +249,7 @@
 (define (lock-dependencies manifest-filename lockfile-filename index-filename)
   (define dry-run? #f)
   (define dev-mode? #t)
-  (define manifest-packages (read-manifest manifest-filename))
+  (define manifest-packages (read-manifest manifest-filename 'mangle-names))
 
   (let-values (((db packages) (read-package-index index-filename manifest-packages)))
     (add-package-dependencies db packages manifest-packages dev-mode?)
@@ -306,7 +309,7 @@
       (write-manifest manifest-filename (reverse akku-package*))))
   (define manifest-packages
     (if (file-exists? manifest-filename)
-        (read-manifest manifest-filename)
+        (read-manifest manifest-filename #f)
         '()))
   (define (get-suitable-range version*)
     ;; TODO: This might pick a range that is not installable together
@@ -365,7 +368,7 @@
 (define (list-packages manifest-filename lockfile-filename index-filename)
   (define manifest-packages
     (if (file-exists? manifest-filename)
-        (read-manifest manifest-filename)
+        (read-manifest manifest-filename #f)
         '()))
   (define lock-spec*         ;FIXME: move to a common parser lib
     (if (file-exists? lockfile-filename)
