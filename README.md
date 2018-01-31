@@ -50,8 +50,8 @@ There are two options:
 
  - Download, unpack and run the binary installer
    from [GitHub](https://github.com/weinholt/akku/releases). Pre-built
-   versions are available for GNU/Linux amd64 and armhf. The
-   installation is completely contained to `~/.akku`.
+   versions are available for GNU/Linux amd64. The installation is
+   completely contained to `~/.akku`.
 
  - Download the source bundle
    from [GitHub](https://github.com/weinholt/akku/releases) (with
