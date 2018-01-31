@@ -4,25 +4,31 @@ Want to discuss the project? Chat with `weinholt`
 in [`#scheme`](irc://irc.freenode.org/#scheme) on Freenode or open an
 issue. There's also `#akku`.
 
-See the [https://github.com/weinholt/akku/projects](GitHub projects)
-page to see the direction of the project.
+Go to [GitHub projects][projects] to see the direction of the project.
 
-## Building a release
+ [projects]: https://github.com/weinholt/akku/projects
 
-Building currently requires Chez Scheme and either Akku.scm or manual
-installation of dependencies (bundled source releases will be provided
-for 0.2.0). Clone the repository:
+## Setting up a development environment
+
+If you already have a working Akku installation (e.g. by installing
+one of the released versions) then things are simple:
 
 ```
 $ git clone https://github.com/weinholt/akku
 $ akku install
 $ source .akku/bin/activate
-$ private/build.chezscheme.sps
 ```
 
-This produces a tarball in the current directory. The tarball contains
-a Petite Chez Scheme distribution, a compiled `akku` program and a
-simple installer that creates `~/bin/akku`.
+If your development machine can't run Akku yet then the least manual
+way forward is to run Akku on a working machine (e.g. a virtual
+machine) and afterwards move the files. Alternatively you can read
+Akku.lock and install the projects manually.
+
+## Building a release
+
+Releasing currently requires Chez Scheme and a working development
+environment (see above). Run `private/build.chezscheme.sps` and
+hopefully it will generate a binary and a source release tarball.
 
 ## Submitting patches
 

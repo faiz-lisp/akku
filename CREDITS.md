@@ -6,3 +6,6 @@ Andreas Rottmann as part of Dorodongo.
 
 Akku.scm also uses numerous SRFIs and other packages, all of which can
 be found referenced in the Akku.lock file.
+
+The idea of using an activation script was borrowed from Python's
+virtualenv.

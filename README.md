@@ -40,8 +40,8 @@ have a modicum of usefulness every step along the way.
 
 ## Dependencies
 
-Akku.scm currently requires the git and curl programs. It has only
-been tested on GNU/Linux systems. Assistance in porting is very
+Akku.scm currently requires the git, curl and gpg programs. It has
+only been tested on GNU/Linux systems. Assistance in porting is very
 welcome.
 
 ## Installation
@@ -54,10 +54,10 @@ There are two options:
    completely contained to `~/.akku`.
 
  - Download the source bundle
-   from [GitHub](https://github.com/weinholt/akku/releases) (with
-   `+src` in its filename). This version is a little slower to start,
-   because it is recompiled each time, but it may run on more types of
-   systems. It requires Chez Scheme 9.5 or later.
+   from [GitHub](https://github.com/weinholt/akku/releases) (files
+   ending with `.src.tar.xz`). This version is a little slower to
+   start, because it is recompiled each time, but it may run on more
+   types of systems. It requires Chez Scheme 9.5 or later.
 
 Please remember to verify the OpenPGP signatures. The releases are
 signed with [E33E61A2E9B8C3A2][key].
@@ -114,6 +114,27 @@ Akku.scm uses semantic versioning for its releases, and so needs to
 declare an API. The libraries that are part of Akku.scm are currently
 not part of the API. The only stable API right now is the command line
 interface.
+
+## Other package managers for Scheme
+
+Akku.scm is not the only option. Here are a some to compare with:
+
+ - For R7RS libraries there is [Snow2](http://snow-fort.org).
+ - Closely related
+   is [snow2-client](https://github.com/sethalves/snow2-client),
+   based on a proposed repository format for R7RS packages.
+ - Racket has its own
+   successful [Racket package system](http://pkgs.racket-lang.org/).
+ - Chicken is famous for its [eggs](http://wiki.call-cc.org/eggs).
+ - Gambit has its [Spheres](http://www.schemespheres.org/).
+
+There are even other R6RS package managers:
+
+ - [Dorodango](https://gitlab.com/rotty/dorodango) by Andreas
+   Rottmann. Akku's dependency solver is nicked from Dorodango.
+   It works more like traditional package managers, like APT.
+ - [Raven](http://ravensc.com/) is a fairly new package manager aimed
+   at Chez Scheme.
 
 ## License
 

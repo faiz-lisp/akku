@@ -49,7 +49,7 @@
    ((version "1.4.0")
     (lock (location (git "https://github.com/weinholt/industria.git"))
           (tag "v1.4")
-          (revision "81262c3d13c273409b3df2c87f7e4d58e139ec21"))
+          (revision "c65505256ac7ffce9b062b4d8dc5e499d1726bd3"))
     (depends ("chez-srfi" "~0.0.0-akku"))
     (depends/dev ("xitomatl" "~0.0.0-akku")))
    ((version "2.0.0-beta.0")
@@ -320,7 +320,7 @@
              ("wak-parscheme" "~0.0.0-akku")
              ("wak-wt-tree" "~0.0.0-akku")
              ("spells" "~0.0.0-akku")
-             ("industria" "^1.4.0")
+             ("industria" "~1.4.0")
              ("ocelotl" "~0.0.0-akku")))))
 
 (package (name "thunderchez")
