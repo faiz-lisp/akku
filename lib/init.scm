@@ -182,7 +182,7 @@
 (define (init-manifest manifest-filepath base-directory)
   (when *verbose*
     (print ";; INFO: Initialising manifest " manifest-filepath " in " base-directory))
-  (let* ((artifact* (find-artifacts base-directory (scm-file-list base-directory))))
+  (let ((artifact* (find-artifacts base-directory (scm-file-list base-directory))))
     (for-each print-artifact artifact*)
 
     (let ((package* (find-packages artifact*)))

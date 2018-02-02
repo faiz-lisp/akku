@@ -46,7 +46,8 @@
 
 (define rx-legal-notice-filename     ;relative to the root of the repo
   (rx (w/nocase
-       (or (: (or "AUTHORS" "CREDITS" "CONTRIBUTORS" "DISCLAIMERS" "THANKS")
+       (or (: (or "AUTHORS" "CREDITS" "CONTRIBUTORS"
+                  "DISCLAIMERS" "NOTICE" "THANKS")
               (* (~ "/")))
            "debian/copyright"
            ;; https://reuse.software/practices/
@@ -260,9 +261,10 @@
      (list (make-include-reference (make-path dir fn ".scm")
                                    (make-pkgpath dir fn ".scm")
                                    'downcase form)))
-    ((a . b)
-     (append (scan-for-includes/r6rs a realpath)
-             (scan-for-includes/r6rs b realpath)))
+    ((? list? e*)
+     (append-map (lambda (e)
+                   (scan-for-includes/r6rs e realpath))
+                 e*))
     (else '())))
 
 ;; R7RS version. The filename is relative to the including file, and

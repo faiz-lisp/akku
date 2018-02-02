@@ -10,6 +10,7 @@ env:
 
 matrix:
   allow_failures:
+    - os: osx
     - env: SCHEME="ChezScheme_master"
     - env: SCHEME="Guile_2.2"
     - env: SCHEME="Larceny"
@@ -39,6 +40,7 @@ cache:
 
 os:
   - linux
+  - osx
 
 compiler:
   - gcc
