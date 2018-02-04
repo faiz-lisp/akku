@@ -117,7 +117,9 @@
   (cp "CONTRIBUTING.md" "dist/doc")
   ;; Bootstrap data
   (mkdir/recursive "dist/share")
-  (cp "bootstrap.db" "dist/share/bootstrap.db"))
+  (cp "bootstrap.db" "dist/share/bootstrap.db")
+  (mkdir/recursive "dist/share/keys.d")
+  (cp "akku-archive-2018.gpg" "dist/share/keys.d/akku-archive-2018.gpg"))
 
 (define (build-binary-distribution)
   ;; Build the distribution.
@@ -224,7 +226,7 @@
         (format p "#!/bin/sh~%")
         (format p "export CHEZSCHEMELIBDIRS=\"$PREFIX/lib\"~%")
         (format p "unset CHEZSCHEMELIBEXTS~%")
-        (format p "exec scheme --program $PREFIX/bin/akku.sps \\$*~%")
+        (format p "exec scheme-script $PREFIX/bin/akku.sps \\$*~%")
         (format p "EOF~%")
         (format p "chmod 0755 $PREFIX/bin/akku~%")
         (format p "mkdir -p $HOME/bin~%")

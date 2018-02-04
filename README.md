@@ -40,8 +40,8 @@ have a modicum of usefulness every step along the way.
 
 ## Dependencies
 
-Akku.scm currently requires the git, curl and gpg programs. It has
-only been tested on GNU/Linux systems. Assistance in porting is very
+Akku.scm currently requires the git and curl programs. It has only
+been tested on GNU/Linux systems. Assistance in porting is very
 welcome.
 
 ## Installation

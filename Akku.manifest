@@ -16,4 +16,4 @@
    ("wak-foof-loop" "~0.0.0-akku")
    ("wak-wt-tree" "~0.0.0-akku")
    ("xitomatl" "~0.0.0-akku")
-   ))
+   ("hashing" "^1.0.0")))

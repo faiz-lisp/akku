@@ -31,6 +31,7 @@
   (only (akku lib install) install)
   (only (akku lib lock) logger:akku.lock lock-dependencies
         add-dependency list-packages)
+  (only (akku lib update) update-index)
   (only (akku lib utils) path-join application-home-directory)
   (rnrs (6)))
 
@@ -56,21 +57,24 @@
   (display "Akku.scm - Scheme package manager
 
 Simple usage:
- akku list - list all packages in the index
- akku install <pkg> - all-in-one add/lock/install a package
+   akku list - list all packages in the index
+ * akku install <pkg> - all-in-one add/lock/install a package
+ * akku update - update the package index
 
 Basic usage:
- akku add <pkg> - add a dependency to Akku.manifest
- akku add <pkg>@<range> - add a versioned dependency
- akku add --dev <pkg> - add a development dependency
- akku init - create a draft Akku.manifest (not yet useful)
- akku lock - generate Akku.lock from Akku.manifest and the index
- akku install - install dependencies according to Akku.lock
+   akku add <pkg> - add a dependency to Akku.manifest
+   akku add <pkg>@<range> - add a versioned dependency
+   akku add --dev <pkg> - add a development dependency
+   akku init - create a draft Akku.manifest (not yet useful)
+   akku lock - generate Akku.lock from Akku.manifest and the index
+ * akku install - install dependencies according to Akku.lock
 
 Advanced usage:
- akku graph - print a graphviz file showing library dependencies
- akku dependency-scan <filename(s)> - print source code dependencies
- akku license-scan <filename(s)> - scan dependencies for notices
+   akku graph - print a graphviz file showing library dependencies
+   akku dependency-scan <filename(s)> - print source code dependencies
+   akku license-scan <filename(s)> - scan dependencies for notices
+
+ [*]: This command may make network requests.
 
 " (current-error-port))
   (exit 0))
@@ -128,6 +132,15 @@ Advanced usage:
          (cmd-lock '())
          (cmd-install '()))))
 
+(define (cmd-update arg*)
+  (define repositories                  ;TODO: should be in a config file
+    '([(tag . akku)
+       (url . "https://akku.weinholt.se/archive/")
+       (keyfile . "akku-archive-*.gpg")]))
+  (define keys-directory (path-join (application-home-directory) "share/keys.d"))
+  (define index-filename (path-join (application-home-directory) "share/index.db"))
+  (update-index index-filename keys-directory repositories))
+
 (define (cmd-graph . _)
   (print-gv-file "."))
 
@@ -153,9 +166,8 @@ Advanced usage:
 (cond
   ((null? (cdr (command-line)))
    (cmd-help))
-  ((string=? (cadr (command-line)) "add")
+  ((string=? (cadr (command-line)) "add") ; TODO: remove
    (cmd-add (cddr (command-line))))
-  ;; TODO: remove
   ((string=? (cadr (command-line)) "init")
    (cmd-init (cddr (command-line))))
   ((string=? (cadr (command-line)) "list")
@@ -164,6 +176,8 @@ Advanced usage:
    (cmd-lock (cddr (command-line))))
   ((string=? (cadr (command-line)) "install")
    (cmd-install (cddr (command-line))))
+  ((string=? (cadr (command-line)) "update")
+   (cmd-update (cddr (command-line))))
   ((string=? (cadr (command-line)) "graph")
    (cmd-graph (cddr (command-line))))
   ((string=? (cadr (command-line)) "dependency-scan")

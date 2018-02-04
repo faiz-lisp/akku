@@ -100,9 +100,17 @@
 
 (package (name "spells")
   (versions
-   ((version "0.0.0-akku.268.4344bea.weinholt")
+   ((version "0.0.0-akku.494.df72dcf5.weinholt")
     (lock (location (git "https://github.com/weinholt/spells.git"))
           (revision "df72dcf553e8ea72958974b6a78aa8db74413d8c"))
+    (depends ("chez-srfi" "~0.0.0-akku")
+             ("wak-irregex" "~0.8.1-akku")
+             ("wak-foof-loop" "~0.0.0-akku")
+             ("wak-fmt" "~0.8.0-akku"))
+    (depends/dev ("wak-trc-testing" "~0.0.0-akku")))
+   ((version "0.0.0-akku.495.5549517.weinholt")
+    (lock (location (git "https://github.com/weinholt/spells.git"))
+          (revision "5549517e63df96cc2d7f4c35bb39b24a992288a0"))
     (depends ("chez-srfi" "~0.0.0-akku")
              ("wak-irregex" "~0.8.1-akku")
              ("wak-foof-loop" "~0.0.0-akku")
@@ -377,3 +385,10 @@
    ((version "0.0.0-akku.4.56abc60")
     (lock (location (git "https://github.com/weinholt/uuid.git"))
           (revision "56abc60ea1a031992c2274e5429ea3e87621f4fb")))))
+
+;; Currently not working, requires running a build script.
+(package (name "swish")
+  (versions
+   ((version "1.0.0-akku.31.a972230")
+    (lock (location (git "https://github.com/becls/swish.git"))
+          (revision "a9722308da8330a64e8e7040647ff251f0159108")))))
