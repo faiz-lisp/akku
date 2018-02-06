@@ -136,8 +136,10 @@
 ;; would be great if this printed SPDX documents.
 (define (license-scan filenames implementations)
   (define rx-copyright-start
-    (rx (w/nocase bow (or "copyright" "(c)" "©" "public domain"
-                          "SPDX-License-Identifier")
+    (rx (w/nocase bow (or "copyright" "(c)" "©")
+                  eow)))
+  (define rx-copyright-started
+    (rx (w/nocase bow (or "public domain" "SPDX-License-Identifier")
                   eow)))
   (define rx-code-start
     (rx (* space)
@@ -218,26 +220,32 @@
                    ;; This is weak, but working for everything used by
                    ;; Akku.scm itself. Sometimes more than is needed
                    ;; is copied over.
-                   (let lp ()
+                   (let lp ((prev-line #f))
                      (unless (port-eof? p)
-                       (let lp-restart ((line0 (get-line p)))
-                         (when (let ((l (latin-1-filter line0)))
-                                 (and (regexp-search rx-copyright-start l)
-                                      (not (regexp-matches rx-code-line l))))
-                           (print-header)
-                           (display line0)
-                           (newline)
-                           (let lp-copy ()
-                             (let ((line (get-line p)))
-                               (cond ((eof-object? line)
-                                      (lp))
-                                     ((regexp-matches rx-code-start (latin-1-filter line))
-                                      (lp-restart line)) ;end of comment
-                                     (else
-                                      (display line)
-                                      (newline)
-                                      (lp-copy)))))))
-                       (lp)))
+                       (let lp-restart ((line0 (get-line p))
+                                        (prev-line prev-line))
+                         (let ((filtered (latin-1-filter line0)))
+                           (when (and (or (regexp-search rx-copyright-start filtered)
+                                          (regexp-search rx-copyright-started filtered))
+                                      (not (regexp-matches rx-code-line filtered)))
+                             (print-header)
+                             (when (and prev-line (regexp-search rx-copyright-started filtered))
+                               ;; The author was probably on the previous line.
+                               (display prev-line)
+                               (newline))
+                             (display line0)
+                             (newline)
+                             (let lp-copy ((prev-line prev-line))
+                               (let ((line (get-line p)))
+                                 (cond ((eof-object? line)
+                                        #f)
+                                       ((regexp-matches rx-code-start (latin-1-filter line))
+                                        (lp-restart line prev-line)) ;end of comment
+                                       (else
+                                        (display line)
+                                        (newline)
+                                        (lp-copy line)))))))
+                         (lp line0))))
                    (print-footer)))
                (unless printed-header
                  (print ";; INFO: No copyright notice in used file " fn))))])
