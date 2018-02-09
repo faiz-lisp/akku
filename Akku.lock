@@ -39,7 +39,7 @@
     (revision "7df9873ee079086a533d500de4358c0adb96f2ff"))
   ((name "spells")
     (location (git "https://github.com/weinholt/spells.git"))
-    (revision "5549517e63df96cc2d7f4c35bb39b24a992288a0"))
+    (revision "a5400406d8423381791a5ef648198f223851eaa2"))
   ((name "wak-common")
     (location
       (git "https://gitlab.com/weinholt/wak-common.git"))

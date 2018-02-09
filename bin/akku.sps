@@ -76,6 +76,9 @@ Advanced usage:
 
  [*]: This command may make network requests.
 
+Homepage: https://github.com/weinholt/akku
+License: GNU GPLv3
+
 " (current-error-port))
   (exit 0))
 

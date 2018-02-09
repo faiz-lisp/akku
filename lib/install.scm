@@ -394,10 +394,14 @@
      (if (or (artifact-internal? artifact) (not (artifact-for-bin? artifact)))
          '()
          (let ((target (split-path (artifact-path artifact))))
-           (list (copy-r6rs-program (binaries-directory)
-                                    (cdr target)
-                                    (path-join srcdir (artifact-path artifact))
-                                    (artifact-form-index artifact))))))
+           (if always-symlink?
+               (list (symlink-file (binaries-directory)
+                                   (cdr target)
+                                   (path-join srcdir (artifact-path artifact))))
+               (list (copy-r6rs-program (binaries-directory)
+                                        (cdr target)
+                                        (path-join srcdir (artifact-path artifact))
+                                        (artifact-form-index artifact)))))))
     ((legal-notice-file? artifact)
      (list (copy-file (path-join (notices-directory project) (artifact-directory artifact))
                       (artifact-filename artifact)
@@ -527,8 +531,6 @@
            (installed-files
             (append installed-files
                     (list (vector current-project
-                                  ;; TODO: Enable symlinking when the
-                                  ;; repo scanner handles them.
-                                  (install-project current-project #f))))))
+                                  (install-project current-project 'symlink))))))
       (install-file-list installed-files))
     (install-activate-script))))

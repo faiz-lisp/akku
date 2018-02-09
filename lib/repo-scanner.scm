@@ -25,6 +25,9 @@
     find-artifacts)
   (import
     (rnrs (6))
+    (only (srfi :1 lists) take-while)
+    (only (srfi :13 strings) string-prefix?)
+    (industria strings)
     (xitomatl AS-match)
     (akku lib compat)
     (akku lib git)
@@ -58,6 +61,18 @@
     ((program-name) (string->symbol program-name))
     (else #f)))
 
+(define (symlink-inside-repo? realpath relpath-list)
+  ;; This is a bit of a heuristic, mainly intended to be used for
+  ;; analyzing .akku/lib/ and handle the symlinks for the current
+  ;; project created by the install command.
+  (let ((link (readlink realpath)))
+    (if (string-prefix? "/" link)
+        #f
+        (let* ((parts (string-split link #\/))
+               (link-dots (take-while (lambda (part) (string=? part "..")) parts)))
+          (>= (length relpath-list)
+              (length link-dots))))))
+
 ;; Takes a directory name and a list of files contained in it. Returns
 ;; a list of artifact records.
 (define (find-artifacts* realpath relpath relpath-list files tracked-files)
@@ -70,7 +85,8 @@
              (string=? "_darcs" fn)
              (string=? "Akku.lock" fn)
              (string=? "Akku.manifest" fn)
-             (file-symbolic-link? realpath)) ;FIXME: don't ignore it it goes out of the repo
+             (and (file-symbolic-link? realpath)
+                  (symlink-inside-repo? realpath relpath-list)))
          (when *verbose*
            (print ";; Ignored " relpath))
          '())                        ;ignore
