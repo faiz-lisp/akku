@@ -25,7 +25,7 @@
   (putenv "SRC" src)
   (putenv "DST" dst)
   ;; FIXME: do it in-process
-  (system "set -x;/bin/cp \"$SRC\" \"$DST\""))
+  (system "set -x;/bin/cp -H \"$SRC\" \"$DST\""))
 
 (define (ln/s src dst)
   (putenv "SRC" src)

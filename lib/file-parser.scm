@@ -22,9 +22,9 @@
   (export
     examine-source-file examine-other-file print-artifact
     artifact? artifact-path artifact-path-list artifact-form-index
-    artifact-imports artifact-assets artifact-implementation
-    artifact-for-test? artifact-internal? artifact-for-bin?
-    artifact-directory artifact-filename
+    artifact-last-form? artifact-imports artifact-assets
+    artifact-implementation artifact-for-test? artifact-internal?
+    artifact-for-bin? artifact-directory artifact-filename
     make-generic-file generic-file?
     make-legal-notice-file legal-notice-file?
     r6rs-library? r6rs-library-name r6rs-library-version r6rs-library-exports
@@ -55,7 +55,7 @@
            (: "LICENSES/" (* any))))))
 
 (define-record-type artifact
-  (fields path path-list form-index imports assets implementation))
+  (fields path path-list form-index last-form? imports assets implementation))
 
 (define-record-type generic-file
   (parent artifact)
@@ -64,7 +64,7 @@
   (protocol
    (lambda (p)
      (lambda (path path-list)
-       (let ((make (p path path-list 0 '() '() #f)))
+       (let ((make (p path path-list 0 #t '() '() #f)))
          (make))))))
 
 (define-record-type legal-notice-file   ;copyright notices etc
@@ -74,7 +74,7 @@
   (protocol
    (lambda (p)
      (lambda (path path-list)
-       (let ((make (p path path-list 0 '() '() #f)))
+       (let ((make (p path path-list 0 #t '() '() #f)))
          (make))))))
 
 (define-record-type r6rs-library
@@ -358,7 +358,7 @@
 ;; Examine a source file and return a file record (or #f if it's
 ;; probably not source code).
 (define (examine-source-file realpath path path-list)
-  (define (maybe-library/module form form-index)
+  (define (maybe-library/module form form-index next-datum)
     (match form
       (('library (name ...)             ;r6rs library
          ('export export* ...)
@@ -367,7 +367,7 @@
        (let ((ver (find list? name))
              (parsed-import-spec* (map parse-r6rs-import-spec import*)))
          (let ((include* (scan-for-includes/r6rs body* realpath)))
-           (make-r6rs-library path path-list form-index
+           (make-r6rs-library path path-list form-index (eof-object? next-datum)
                               parsed-import-spec* include*
                               (or (path->implementation-name path)
                                   (r6rs-library-name*->implementation-name
@@ -378,21 +378,22 @@
       (_                                ;some type of module or bare source
        (cond ((path->implementation-name path) =>
               (lambda (impl)
-                (make-module path path-list 0 #f '() impl)))
+                (make-module path path-list form-index (eof-object? next-datum)
+                             #f '() impl)))
              (else
               ;; TODO: detect modules from various implementations
               #f)))))
-  (define (maybe-program form form-index port)
+  (define (maybe-program form form-index next-datum port)
     (match form
       (('import import* ...)
        (let ((parsed-import-spec* (map parse-r6rs-import-spec import*))
-             (include* (let lp ((include* '()))
-                         (let ((datum (read port)))
-                           (if (eof-object? datum)
-                               include*
-                               (lp (append (scan-for-includes/r6rs datum realpath)
-                                           include*)))))))
-         (make-r6rs-program path path-list form-index parsed-import-spec* include*
+             (include* (let lp ((include* '()) (datum next-datum))
+                         (if (eof-object? datum)
+                             include*
+                             (lp (append (scan-for-includes/r6rs datum realpath)
+                                         include*)
+                                 (read port))))))
+         (make-r6rs-program path path-list form-index #t parsed-import-spec* include*
                             (or (path->implementation-name path)
                                 (r6rs-library-name*->implementation-name
                                  (map library-reference-name parsed-import-spec*))))))
@@ -410,15 +411,16 @@
             (unless (or (string-prefix? "#! " line1)
                         (string-prefix? "#!/" line1))
               (set-port-position! port start)))
-          (let lp ((artifact* '()) (form-index 0))
-            (let ((data (read port)))
-              (cond ((and (not (eof-object? data))
-                          (or (maybe-program data form-index port)
-                              (maybe-library/module data form-index)))
+          (let lp ((artifact* '()) (form-index 0) (datum (read port)))
+            (let ((next-datum (read port)))
+              (cond ((and (not (eof-object? datum))
+                          (or (maybe-program datum form-index next-datum port)
+                              (maybe-library/module datum form-index next-datum)))
                      => (lambda (artifact)
                           (if (r6rs-library? artifact)
                               (lp (cons artifact artifact*)
-                                  (+ form-index 1))
+                                  (+ form-index 1)
+                                  next-datum)
                               (cons artifact artifact*))))
                     (else
                      (if (null? artifact*)

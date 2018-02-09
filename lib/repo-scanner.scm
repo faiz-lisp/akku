@@ -70,7 +70,7 @@
              (string=? "_darcs" fn)
              (string=? "Akku.lock" fn)
              (string=? "Akku.manifest" fn)
-             (file-symbolic-link? realpath))
+             (file-symbolic-link? realpath)) ;FIXME: don't ignore it it goes out of the repo
          (when *verbose*
            (print ";; Ignored " relpath))
          '())                        ;ignore

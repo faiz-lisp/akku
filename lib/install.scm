@@ -337,17 +337,21 @@
     target-pathname))
 
 (define (symlink-file target-directory target-filename source-pathname)
-  (let ((target-pathname (path-join target-directory target-filename)))
-    (print ";; DEBUG: Symlinking file " source-pathname " to " target-pathname)
-    (check-filename target-pathname (support-windows?))
-    (mkdir/recursive target-directory)
-    (when (file-exists/no-follow? target-pathname)
-      (delete-file target-pathname))
-    (symlink source-pathname target-pathname)
-    target-pathname))
+  (cond
+    ((support-windows?)
+     (copy-file target-directory target-filename source-pathname))
+    (else
+     (let ((target-pathname (path-join target-directory target-filename)))
+       (print ";; DEBUG: Symlinking file " source-pathname " to " target-pathname)
+       (check-filename target-pathname (support-windows?))
+       (mkdir/recursive target-directory)
+       (when (file-exists/no-follow? target-pathname)
+         (delete-file target-pathname))
+       (symlink source-pathname target-pathname)
+       target-pathname))))
 
 ;; Install an artifact.
-(define (install-artifact project artifact srcdir)
+(define (install-artifact project artifact srcdir always-symlink?)
   (cond
     ((r6rs-library? artifact)
      (let ((library-locations
@@ -364,20 +368,27 @@
           (let ((target (car library-locations))
                 (aliases (cdr library-locations)))
             (let ((target-pathname
-                   (copy-r6rs-library (path-join (libraries-directory) (car target))
-                                      (cdr target)
-                                      (path-join srcdir (artifact-path artifact))
-                                      (artifact-form-index artifact))))
+                   (cond ((and always-symlink? (zero? (artifact-form-index artifact))
+                               (artifact-last-form? artifact))
+                          ;; It's safe to symlink iff the file has a
+                          ;; single form.
+                          (symlink-file (path-join (libraries-directory) (car target))
+                                        (cdr target)
+                                        (path-join srcdir (artifact-path artifact))))
+                         (else
+                          (when always-symlink?
+                            (print ";; WARNING: refusing to symlink multi-form file "
+                                   (artifact-path artifact)))
+                          (copy-r6rs-library (path-join (libraries-directory) (car target))
+                                             (cdr target)
+                                             (path-join srcdir (artifact-path artifact))
+                                             (artifact-form-index artifact))))))
               (cons target-pathname
                     (map-in-order
                      (lambda (alias)
-                       (if (support-windows?)
-                           (copy-file (path-join (libraries-directory) (car alias))
-                                      (cdr alias)
-                                      target-pathname)
-                           (symlink-file (path-join (libraries-directory) (car alias))
-                                         (cdr alias)
-                                         target-pathname)))
+                       (symlink-file (path-join (libraries-directory) (car alias))
+                                     (cdr alias)
+                                     target-pathname))
                      aliases))))))))
     ((r6rs-program? artifact)
      (if (or (artifact-internal? artifact) (not (artifact-for-bin? artifact)))
@@ -394,14 +405,15 @@
     (else '())))
 
 ;; Installs an asset, which can be any regular file.
-(define (install-asset asset)
+(define (install-asset asset always-symlink?)
   (let ((target (split-path (include-reference-path asset))))
-    (list (copy-file (path-join (libraries-directory) (car target))
-                     (cdr target)
-                     (include-reference-realpath asset)))))
+    (list ((if always-symlink? symlink-file copy-file)
+           (path-join (libraries-directory) (car target))
+           (cdr target)
+           (include-reference-realpath asset)))))
 
 ;; Install a project and return a alist of artifact/asset => filename.
-(define (install-project project)
+(define (install-project project always-symlink?)
   (let ((srcdir (project-source-directory project)))
     ;; Copy libraries, programs and assets to the file system. These
     ;; operations are ordered.
@@ -415,12 +427,12 @@
          (let ((artifact-filename*
                 (map-in-order (lambda (artifact)
                                 (map (lambda (fn) (cons artifact fn))
-                                     (install-artifact project artifact srcdir)))
+                                     (install-artifact project artifact srcdir always-symlink?)))
                               artifact*))
                (asset-filename*
                 (map-in-order (lambda (asset)
                                 (map (lambda (fn) (cons asset fn))
-                                     (install-asset asset)))
+                                     (install-asset asset always-symlink?)))
                               asset*)))
            (append (apply append artifact-filename*) (apply append asset-filename*)))))
       (else
@@ -508,9 +520,15 @@
           (lambda (p)
             (display (sources-directory*) p)))))
     (for-each fetch-project project-list)
-    (let ((installed-files
+    (let* ((installed-files
            (map-in-order (lambda (project)
-                           (vector project (install-project project)))
-                         (append project-list (list current-project)))))
+                           (vector project (install-project project #f)))
+                         project-list))
+           (installed-files
+            (append installed-files
+                    (list (vector current-project
+                                  ;; TODO: Enable symlinking when the
+                                  ;; repo scanner handles them.
+                                  (install-project current-project #f))))))
       (install-file-list installed-files))
     (install-activate-script))))

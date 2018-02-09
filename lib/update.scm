@@ -206,4 +206,3 @@
            package-names))))
     (rename-file tempfile full-index-filename)
     (fmt #t ";; INFO: Index updated" nl))))
-
