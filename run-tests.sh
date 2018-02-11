@@ -13,5 +13,7 @@ tests/test-lockfile2.sh
 
 akku list
 akku lock
+akku update
+akku lock
 
 echo All tests passed

@@ -529,8 +529,10 @@
                            (vector project (install-project project #f)))
                          project-list))
            (installed-files
-            (append installed-files
-                    (list (vector current-project
-                                  (install-project current-project 'symlink))))))
+            (if (running-from-home?)    ;protect against user being in $HOME
+                installed-files
+                (append installed-files
+                        (list (vector current-project
+                                      (install-project current-project 'symlink)))))))
       (install-file-list installed-files))
     (install-activate-script))))

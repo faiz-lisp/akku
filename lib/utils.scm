@@ -28,14 +28,15 @@
     read-shebang
     pipe-ports
     application-home-directory
-    cache-directory)
+    cache-directory
+    running-from-home?)
   (import
     (rnrs (6))
     (rnrs mutable-pairs (6))
     (only (srfi :1 lists) append-map filter-map map-in-order delete-duplicates)
-    (only (srfi :13 strings) string-prefix? string-suffix? string-index)
+    (only (srfi :13 strings) string-prefix? string-suffix? string-index string-trim-right)
     (only (industria strings) string-split)
-    (only (akku lib compat) file-directory? mkdir getenv))
+    (only (akku lib compat) cd file-directory? mkdir getenv))
 
 (define (print . x*)
   (for-each (lambda (x)
@@ -112,4 +113,8 @@
   (cond ((getenv "AKKU_CACHE_DIR"))
         (else
          (assert (getenv "HOME"))
-         (path-join (getenv "HOME") ".cache/akku")))))
+         (path-join (getenv "HOME") ".cache/akku"))))
+
+(define (running-from-home?)
+  (equal? (string-trim-right (cd) #\/)
+          (string-trim-right (getenv "HOME") #\/))))
