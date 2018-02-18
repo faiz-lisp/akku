@@ -33,6 +33,7 @@
         add-dependency list-packages)
   (only (akku lib update) update-index)
   (only (akku lib utils) path-join application-home-directory)
+  (only (akku lib publish) publish-packages)
   (rnrs (6)))
 
 (define (simple-log-formatter entry)
@@ -68,6 +69,9 @@ Basic usage:
    akku init - create a draft Akku.manifest (not yet useful)
    akku lock - generate Akku.lock from Akku.manifest and the index
  * akku install - install dependencies according to Akku.lock
+
+Creative usage:
+ * akku publish - publish the current project [WIP]
 
 Advanced usage:
    akku graph - print a graphviz file showing library dependencies
@@ -135,6 +139,11 @@ License: GNU GPLv3
          (cmd-lock '())
          (cmd-install '()))))
 
+(define (cmd-publish arg*)
+  (unless (null? arg*)
+    (cmd-help))
+  (publish-packages manifest-filename "."))
+
 (define (cmd-update arg*)
   (define repositories                  ;TODO: should be in a config file
     '([(tag . akku)
@@ -179,6 +188,8 @@ License: GNU GPLv3
    (cmd-lock (cddr (command-line))))
   ((string=? (cadr (command-line)) "install")
    (cmd-install (cddr (command-line))))
+  ((string=? (cadr (command-line)) "publish")
+   (cmd-publish (cddr (command-line))))
   ((string=? (cadr (command-line)) "update")
    (cmd-update (cddr (command-line))))
   ((string=? (cadr (command-line)) "graph")

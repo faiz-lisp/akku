@@ -19,7 +19,11 @@
     (lock (location (git "https://github.com/weinholt/hashing.git"))
           (tag "v1.0.0")
           (revision "de6aa096166bb026eb927b56f763707180ec0330"))
-    (depends))))
+    (depends))
+   ((version "1.1.0")
+    (lock (location (git "https://github.com/weinholt/hashing.git"))
+          (tag "v1.1.0")
+          (revision "8a6b2ef11074219a10f0fca4c8ad829262a6b5ab")))))
 
 (package (name "ip-address")
   (versions

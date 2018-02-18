@@ -37,6 +37,7 @@
     (xitomatl alists)
     (xitomatl AS-match)
     (only (akku lib compat) pretty-print rename-file getcwd)
+    (akku lib manifest)
     (akku lib solver)
     (akku lib solver choice)
     (akku lib solver dummy-db)          ;TODO: Make a proper database
@@ -50,25 +51,6 @@
 (define log/info (make-fmt-log logger:akku.lock 'info))
 (define log/debug (make-fmt-log logger:akku.lock 'debug))
 (define log/trace (make-fmt-log logger:akku.lock 'trace))
-
-(define-record-type package
-  (nongenerative)
-  (sealed #t)
-  (fields name version*))
-
-(define-record-type version
-  (nongenerative)
-  (sealed #t)
-  (fields number semver lock depends depends/dev conflicts))
-
-(define (parse-version version-spec)
-  (let ((version-number (car (assq-ref version-spec 'version))))
-    (make-version version-number
-                  (string->semver version-number)
-                  (assq-ref version-spec 'lock)
-                  (assq-ref version-spec 'depends '())
-                  (assq-ref version-spec 'depends/dev '())
-                  (assq-ref version-spec 'conflicts '()))))
 
 (define (read-package-index index-filename manifest-packages)
   (let ((db (make-dummy-db))
@@ -94,30 +76,6 @@
              (lp))
             (else (lp))))))             ;allow for future expansion
     (values db packages)))
-
-;; Read the packages in the manifest. Optionally mangle names so they
-;; don't get mixed up with names in the index.
-(define (read-manifest manifest-filename mangle-names?)
-  (call-with-input-file manifest-filename
-    (lambda (p)
-      (let lp ((pkg* '()) (name* '()))
-        (match (read p)
-          (('akku-package (name version) prop* ...)
-           (assert (not (member name name*)))
-           (let ((license-expr (car (assq-ref prop* 'license))))
-             (or (member license-expr '("NONE" "NOASSERTION"))
-                 (parse-license-expression license-expr))) ;TODO: validate
-           (let* ((ver (parse-version `((version ,version)
-                                        (lock #f)
-                                        ,@prop*)))
-                  (pkg (make-package (if mangle-names?
-                                         `(in-manifest: ,name)
-                                         name)
-                                     (list ver))))
-             (lp (cons pkg pkg*) (cons name name*))))
-          ((? eof-object?)
-           pkg*)
-          (else (lp pkg* name*)))))))   ;allow for future expansion
 
 ;; Get scores and choices for the packages in the manifest. These are
 ;; scored very high and set to already be installed.
@@ -280,22 +238,6 @@
 ;; Adds a dependency to the manifest. FIXME: needs to be moved to
 ;; somewhere else.
 (define (add-dependency manifest-filename index-filename dev? dep-name dep-range)
-  (define (write-manifest manifest-filename akku-package*)
-    (call-with-port (open-file-output-port
-                     (string-append manifest-filename ".tmp")
-                     (file-options no-fail)
-                     (buffer-mode block)
-                     (native-transcoder))
-      (lambda (p)
-        (display "#!r6rs ; -*- mode: scheme; coding: utf-8 -*-\n" p)
-        (write '(import (akku format manifest)) p)
-        (display "\n\n" p)
-        (for-each (lambda (pkg)
-                    ;; Pretty print is not good enough
-                    (pretty-print pkg p))
-                  akku-package*)))
-    (rename-file (string-append manifest-filename ".tmp") manifest-filename)
-    (log/info "Wrote " manifest-filename))
   (define (update-manifest manifest-filename proc)
     (let ((akku-package*
            (call-with-input-file manifest-filename
@@ -306,7 +248,8 @@
                     (cons (proc akku-package) pkg*))
                    ((? eof-object?) pkg*)
                    (else (lp pkg*))))))))
-      (write-manifest manifest-filename (reverse akku-package*))))
+      (write-manifest manifest-filename (reverse akku-package*))
+      (log/info "Wrote " manifest-filename)))
   (define manifest-packages
     (if (file-exists? manifest-filename)
         (read-manifest manifest-filename #f)
@@ -353,14 +296,10 @@
                      ;; used immediately, unlike the one in init.
                      (write-manifest
                       manifest-filename
-                      `((akku-package
-                         (,(string-downcase (cdr (split-path (getcwd))))
-                          "0.0.0-alpha.0")
-                         (synopsis "I did not edit Akku.manifest")
-                         (authors "K. Programistova <schemer@example.com>")
-                         (license "NOASSERTION")
-                         (,(if dev? 'depends/dev 'depends)
-                          (,package-name ,range))))))))))
+                      (list (draft-akku-package #f
+                                                `(,(if dev? 'depends/dev 'depends)
+                                                  (,package-name ,range)))))
+                     (log/info "Created a draft manifest in " manifest-filename))))))
       (else
        (error 'add-dependency "Package not found" package-name)))))
 
@@ -368,7 +307,7 @@
 (define (list-packages manifest-filename lockfile-filename index-filename)
   (define manifest-packages
     (if (file-exists? manifest-filename)
-        (read-manifest manifest-filename #f)
+        (read-manifest manifest-filename)
         '()))
   (define lock-spec*         ;FIXME: move to a common parser lib
     (if (file-exists? lockfile-filename)

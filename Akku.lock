@@ -7,8 +7,8 @@
     (revision "fc892dada9f2dc707e984901829a889a526edf80"))
   ((name "hashing")
     (location (git "https://github.com/weinholt/hashing.git"))
-    (tag "v1.0.0")
-    (revision "de6aa096166bb026eb927b56f763707180ec0330"))
+    (tag "v1.1.0")
+    (revision "8a6b2ef11074219a10f0fca4c8ad829262a6b5ab"))
   ((name "ip-address")
     (location
       (git "https://github.com/weinholt/ip-address.git"))

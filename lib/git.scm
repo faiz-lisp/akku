@@ -28,7 +28,10 @@
     git-checkout-tag
     git-ls-files
     git-remote-set-url
-    git-rev-parse)
+    git-rev-parse
+    git-tag-list
+    git-list-remotes
+    git-remote-get-url)
   (import
     (akku lib compat)
     (only (akku lib utils) string-split)
@@ -95,4 +98,44 @@
   (let-values (((from-stdout to-stdin _process-id)
                 (apply values (process "cd \"$AKKU_DIR\" && git rev-parse \"$AKKU_REV\""))))
     (close-port to-stdin)
-    (get-line from-stdout))))
+    (let ((line (get-line from-stdout)))
+      (close-port from-stdout)
+      line)))
+
+(define (read-lines port)
+  (let lp ((tags '()))
+    (cond ((port-eof? port)
+           (close-port port)
+           (reverse tags))
+          (else
+           (lp (cons (get-line port) tags))))))
+
+(define (git-tag-list directory pattern)
+  (putenv "GIT_DIR" ".git")
+  (putenv "AKKU_DIR" directory)
+  (putenv "AKKU_PATTERN" pattern)
+  (let-values (((from-stdout to-stdin _process-id)
+                (apply values (process "cd \"$AKKU_DIR\" && git tag -l \"$AKKU_PATTERN\""))))
+    (close-port to-stdin)
+    (read-lines from-stdout)))
+
+(define (git-list-remotes directory)
+  (putenv "GIT_DIR" ".git")
+  (putenv "AKKU_DIR" directory)
+  (let-values (((from-stdout to-stdin _process-id)
+                (apply values (process "cd \"$AKKU_DIR\" && git remote"))))
+    (close-port to-stdin)
+    (read-lines from-stdout)))
+
+(define (git-remote-get-url directory remote)
+  (putenv "GIT_DIR" ".git")
+  (putenv "AKKU_DIR" directory)
+  (putenv "AKKU_REMOTE" remote)
+  (let-values (((from-stdout to-stdin _process-id)
+                (apply values (process "cd \"$AKKU_DIR\" && git remote get-url \"$AKKU_REMOTE\""))))
+    (close-port to-stdin)
+    (let ((line (get-line from-stdout)))
+      (close-port from-stdout)
+      line)))
+
+)

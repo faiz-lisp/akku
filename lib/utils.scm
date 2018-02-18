@@ -36,7 +36,7 @@
     (only (srfi :1 lists) append-map filter-map map-in-order delete-duplicates)
     (only (srfi :13 strings) string-prefix? string-suffix? string-index string-trim-right)
     (only (industria strings) string-split)
-    (only (akku lib compat) cd file-directory? mkdir getenv))
+    (only (akku lib compat) getcwd file-directory? mkdir getenv))
 
 (define (print . x*)
   (for-each (lambda (x)
@@ -116,5 +116,5 @@
          (path-join (getenv "HOME") ".cache/akku"))))
 
 (define (running-from-home?)
-  (equal? (string-trim-right (cd) #\/)
+  (equal? (string-trim-right (getcwd) #\/)
           (string-trim-right (getenv "HOME") #\/))))

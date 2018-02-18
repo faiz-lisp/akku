@@ -123,9 +123,8 @@
       ;; Download the signature by the SHA-256 of the file to be
       ;; signed. Prevents a race condition where the .sig file is
       ;; replaced during the previous download, and avoids using
-      ;; cleartext signatures. TODO: Update to hashing ^1.1.0 and do
-      ;; away with string-downcase.
-      (let ((index-sha256 (string-downcase (sha-256->string (sha-256-finish index-checksum)))))
+      ;; cleartext signatures.
+      (let ((index-sha256 (sha-256->string (sha-256-finish index-checksum))))
         (download-file (url-join repository-url
                                  (string-append "by-sha256/"
                                                 (substring index-sha256 0 2)
