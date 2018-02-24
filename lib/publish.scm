@@ -81,11 +81,11 @@ fi
             ((regexp-matches (rx "https://" ($ (+ any))) url)
              => (lambda (m) url))
             ;; git@github.com:weinholt/akku.git
-            ((regexp-matches (rx "git@" (or "github.com" "gitlab.com")
+            ((regexp-matches (rx "git@" ($ (or "github.com" "gitlab.com"))
                                  ":" ($ (+ any))) url)
              => (lambda (m)
-                  (string-append "https://github.com/"
-                                 (regexp-match-submatch m 1))))
+                  (string-append "https://" (regexp-match-submatch m 1) "/"
+                                 (regexp-match-submatch m 2))))
             (else
              (lp (cdr remote*))))))))
 
