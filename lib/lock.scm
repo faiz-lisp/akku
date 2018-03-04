@@ -166,6 +166,8 @@
 (define (add-package-dependencies db packages manifest-packages dev-mode?)
   (define (process-package-version pkg version-idx version)
     (define (process-deps lst conflict?)
+      (log/debug "dependency: " (package-name pkg) " " (version-number version) " "
+                 (if conflict? "conflicts" "depends") " " lst)
       (let ((deps (dependencies->version-tags packages pkg lst)))
         (unless (null? deps)
           (dummy-db-add-dependency! db (package-name pkg) version-idx conflict?
@@ -181,7 +183,10 @@
   (let-values (((pkg-names pkgs) (hashtable-entries packages)))
       (vector-for-each
        (lambda (name pkg)
+         (log/debug "package " name " has versions "
+                    (map version-number (package-version* pkg)))
          (for-each (lambda (version-idx version)
+                     (log/debug "processing " name ": " version)
                      (process-package-version pkg version-idx version))
                    (iota (length (package-version* pkg)))
                    (package-version* pkg)))

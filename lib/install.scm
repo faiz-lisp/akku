@@ -52,29 +52,9 @@
 (define (sources-directory)
   (path-join (akku-directory) (sources-directory*)))
 
+;; Turns a project name into that works as a directory name.
 (define (project-sanitized-name project)
-  ;; Turns a project name into that works as a directory name.
-  (define hex "0123456789abcdefgh")
-  (let ((dirname (if (string? (project-name project))
-                     (project-name project)
-                     (call-with-string-output-port
-                       (lambda (p)
-                         (display (project-name project) p))))))
-    (call-with-string-output-port
-      (lambda (p)
-        (do ((bv (string->utf8 (string-normalize-nfc dirname)))
-             (i 0 (fx+ i 1)))
-            ((fx=? i (bytevector-length bv)))
-          (let* ((b (bytevector-u8-ref bv i))
-                 (c (integer->char b)))
-            (cond ((and (char>=? c #\space) (char<? c #\delete)
-                        (not (string-index "<>:\"/\\|?*~" c)))
-                   (put-char p c))
-                  (else
-                   (let-values (((n0 n1) (fxdiv-and-mod b 16)))
-                     (put-char p #\%)
-                     (put-char p (string-ref hex n0))
-                     (put-char p (string-ref hex n1)))))))))))
+  (sanitized-name (project-name project)))
 
 (define (project-source-directory project)
   (match (project-source project)

@@ -24,12 +24,13 @@
     append-map filter-map map-in-order delete-duplicates
     string-prefix? string-suffix? string-index
     string-split
-    mkdir/recursive split-path path-join
+    mkdir/recursive split-path path-join (rename (path-join url-join))
     read-shebang
     pipe-ports
     application-home-directory
     cache-directory
-    running-from-home?)
+    running-from-home?
+    sanitized-name)
   (import
     (rnrs (6))
     (rnrs mutable-pairs (6))
@@ -117,4 +118,27 @@
 
 (define (running-from-home?)
   (equal? (string-trim-right (getcwd) #\/)
-          (string-trim-right (getenv "HOME") #\/))))
+          (string-trim-right (getenv "HOME") #\/)))
+
+(define (sanitized-name name)
+  ;; Turns a project/package name into that works as a directory/file name.
+  (define hex "0123456789abcdefgh")
+  (let ((dirname (if (string? name)
+                     name
+                     (call-with-string-output-port
+                       (lambda (p) (display name p))))))
+    (call-with-string-output-port
+      (lambda (p)
+        (do ((bv (string->utf8 (string-normalize-nfc dirname)))
+             (i 0 (fx+ i 1)))
+            ((fx=? i (bytevector-length bv)))
+          (let* ((b (bytevector-u8-ref bv i))
+                 (c (integer->char b)))
+            (cond ((and (char>=? c #\space) (char<? c #\delete)
+                        (not (string-index "<>:\"/\\|?*~" c)))
+                   (put-char p c))
+                  (else
+                   (let-values (((n0 n1) (fxdiv-and-mod b 16)))
+                     (put-char p #\%)
+                     (put-char p (string-ref hex n0))
+                     (put-char p (string-ref hex n1))))))))))))

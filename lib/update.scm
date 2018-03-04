@@ -33,7 +33,7 @@
     (xitomatl alists)
     (xitomatl AS-match)
     (only (akku lib compat) directory-list rename-file pretty-print)
-    (only (akku lib utils) print path-join)
+    (only (akku lib utils) print path-join url-join)
     (akku private http))
 
 (define (download-file url local-filename callback)
@@ -106,7 +106,6 @@
 ;; Download indices and merge them into one.
 (define (update-index full-index-filename keys-directory repositories)
   (define (fetch-index suffix tag repository-url keyfile-glob)
-    (define url-join path-join)
     (let ((index-filename (string-append full-index-filename suffix))
           (sig-filename (string-append full-index-filename suffix ".sig"))
           (temp-filename (string-append full-index-filename suffix ".tmp"))

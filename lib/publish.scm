@@ -26,50 +26,12 @@
     (semver versions)
     (srfi :115 regexp)
     (wak fmt)
+    (wak fmt color)
     (only (xitomatl common) pretty-print)
+    (only (akku lib compat) system putenv)
     (akku lib git)
     (akku lib manifest)
-
-    )
-
-
-#|
-URL=$(git remote -v|grep fetch|awk '{print $2}'|head -1)
-PKG_NAME=$(basename $PWD)
-
-#git tag -l|sed 's/^v//'|xargs semver|tail -n1
-TAG=$(git tag -l|grep ^v|tail -n1)
-
-if [ "x$TAG" = "x" ]; then
-
-COMMITS=$(git log|grep ^Date|wc -l)
-SHORT=$(git describe --always)
-REVISION=$(git rev-parse HEAD)
-cat <<EOF
-(package (name "$PKG_NAME")
-  (versions
-   ((version "0.0.0-akku.$COMMITS.$SHORT")
-    (lock (location (git "$URL"))
-          (revision "$REVISION")))))
-EOF
-
-else
-
-REVISION=$(git rev-list -n 1 "$TAG")
-VERSION=$(echo $TAG | sed 's/v//')
-cat <<EOF
-(package (name "$PKG_NAME")
-  (versions
-   ((version "$VERSION")
-    (lock (location (git "$URL"))
-          (tag "$TAG")
-          (revision "$REVISION")))))
-EOF
-
-fi
-
-  |#
-
+    (akku lib utils))
 
 (define (guess-public-git-location base-directory)
   (let lp ((remote* (git-list-remotes base-directory)))
@@ -110,34 +72,84 @@ fi
            `((location (git ,pull-url))
              (revision ,head-revision))))))
 
-(define (publish-packages/git packages base-directory)
-  (let* ((version (car (package-version* (car packages))))
-         (lock (get-git-lock base-directory (version-number version))))
-    (for-each (lambda (pkg)
-                (version-lock-set! version lock))
-              packages)
-    (for-each (lambda (pkg)
-                (fmt #t (pretty (package->index-package pkg))))
-              packages)
-    (newline)))
+(define (package-filename pkg)
+  (string-append (sanitized-name (package-name pkg)) "_"
+                 (version-number (car (package-version* pkg))) ".akku"))
 
-(define (publish-packages manifest-filename base-directory)
+(define (gpg-detach-sign filename)
+  (putenv "AKKU_FN" filename)
+  (unless (and (zero? (system "set -x;gpg -sb \"$AKKU_FN\""))
+               (file-exists? (string-append filename ".sig")))
+    (error 'gpg-detach-sign "Could not sign with gpg" filename)))
+
+(define (submit package* version base-directory archive-url*)
+  ;; Create Akku index files.
+  (let ((filename* (map package-filename package*)))
+    (for-each
+     (lambda (pkg fn)
+       (if (file-exists? fn)
+           (delete-file fn))
+       (call-with-output-file fn
+         (lambda (p)
+           ;; This writes a fragment of an index file.
+           (fmt #t "Writing " fn " ..." nl)
+           (fmt p "#!r6rs" nl)
+           (for-each (lambda (archive-url)
+                       (fmt p ";; Submit-To: " archive-url "packages/" nl))
+                     archive-url*)
+           (pretty-print (package->index-package pkg) p))))
+     package* filename*)
+    ;; Ocular inspection.
+    (for-each
+     (lambda (fn)
+       (fmt #t (fmt-green (call-with-input-file fn get-string-all)) nl))
+     filename*)
+    (fmt #t "Submit the files shown above? (y/N) ")
+    (flush-output-port (current-output-port))
+    (unless (member (get-line (current-input-port)) '("yes" "y"))
+      (error 'submit "User did not answer yes."))
+    ;; Sign them.
+    (for-each
+     (lambda (pkg fn)
+       (fmt #t "Signing " fn " ..." nl)
+       (gpg-detach-sign fn))
+     package* filename*)
+    ;; Submit.
+    (for-each
+     (lambda (archive-url)
+       (fmt #t "Submitting to " archive-url " ..." nl)
+       (putenv "AKKU_FN" (fmt #f (fmt-join
+                                  (lambda (fn)
+                                    (cat (dsp fn) (dsp ".sig")
+                                         (dsp ",")
+                                         (dsp fn)))
+                                  filename* ",")))
+       (putenv "AKKU_URL" (url-join archive-url "packages/"))
+       (unless (zero? (system "set -x;curl --upload-file \"{$AKKU_FN}\" \"$AKKU_URL\""))
+         (error 'submit "Error submitting" archive-url))
+       archive-url*)
+     archive-url*)))
+
+(define (publish-packages manifest-filename base-directory archive-url*)
   (cond
     ((file-exists? manifest-filename)
-     (let ((packages (read-manifest manifest-filename)))
-       (when (null? packages)
+     (let ((package* (read-manifest manifest-filename)))
+       (when (null? package*)
          (error 'publish-packages "Empty manifest"))
-       (cond
-         ((is-git-repository? base-directory)
-          (publish-packages/git packages base-directory))
-         (else
-          (error 'publish-packages
-                 "Publishing from non-git repositories is not yet supported")))))
+       (let* ((version (car (package-version* (car package*))))
+              (lock (cond
+                      ((is-git-repository? base-directory)
+                       (get-git-lock base-directory (version-number version)))
+                      (else
+                       (error 'publish-packages
+                              "Publishing from non-git repositories is not yet supported")))))
+         ;; TODO: each package* needs a separate lock if uploaded as tarballs
+         (version-lock-set! version lock)
+         (submit package* version base-directory archive-url*))))
     (else
      (write-manifest manifest-filename
                      (list (draft-akku-package #f ;XXX: use highest version tag
                                                `(location (git "https://example.com/")))))
      (fmt #t "Edit " manifest-filename " and run publish again" nl))))
-
 
 )

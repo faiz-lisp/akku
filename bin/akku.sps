@@ -142,7 +142,7 @@ License: GNU GPLv3
 (define (cmd-publish arg*)
   (unless (null? arg*)
     (cmd-help))
-  (publish-packages manifest-filename "."))
+  (publish-packages manifest-filename "." '("https://akku.weinholt.se/archive/")))
 
 (define (cmd-update arg*)
   (define repositories                  ;TODO: should be in a config file
@@ -178,7 +178,7 @@ License: GNU GPLv3
 (cond
   ((null? (cdr (command-line)))
    (cmd-help))
-  ((string=? (cadr (command-line)) "add") ; TODO: remove
+  ((string=? (cadr (command-line)) "add") ; TODO: "remove"
    (cmd-add (cddr (command-line))))
   ((string=? (cadr (command-line)) "init")
    (cmd-init (cddr (command-line))))
