@@ -29,6 +29,7 @@
     git-ls-files
     git-remote-set-url
     git-rev-parse
+    git-rev-list/first
     git-tag-list
     git-list-remotes
     git-remote-get-url)
@@ -97,6 +98,17 @@
   (putenv "AKKU_REV" rev)
   (let-values (((from-stdout to-stdin _process-id)
                 (apply values (process "cd \"$AKKU_DIR\" && git rev-parse \"$AKKU_REV\""))))
+    (close-port to-stdin)
+    (let ((line (get-line from-stdout)))
+      (close-port from-stdout)
+      line)))
+
+(define (git-rev-list/first directory rev)
+  (putenv "GIT_DIR" ".git")
+  (putenv "AKKU_DIR" directory)
+  (putenv "AKKU_REV" rev)
+  (let-values (((from-stdout to-stdin _process-id)
+                (apply values (process "cd \"$AKKU_DIR\" && git rev-list -n1 \"$AKKU_REV\""))))
     (close-port to-stdin)
     (let ((line (get-line from-stdout)))
       (close-port from-stdout)

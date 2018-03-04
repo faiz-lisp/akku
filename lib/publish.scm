@@ -60,7 +60,7 @@
     (unless pull-url
       (error 'get-git-lock "The git location must be added to Akku.manifest"))
     (cond ((member version-tag version-tags)
-           (let ((revision (git-rev-parse base-directory version-tag)))
+           (let ((revision (git-rev-list/first base-directory version-tag)))
              (unless (string=? head-revision revision)
                (fmt (current-error-port)
                     ";; WARNING: Branch HEAD does not match the release tag" nl))
